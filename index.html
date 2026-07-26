@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>COVID-19: Waves, then Vaccines</title>
+<title>COVID-19: When Deaths Decoupled from Cases</title>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <style>
   body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;color:#222;background:#fafafa;}
@@ -40,7 +40,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>COVID-19: Waves, then Vaccines</h1>
+  <h1>COVID-19: When Deaths Decoupled from Cases</h1>
   <div class="sub">A narrative visualization of worldwide COVID-19, 2020&ndash;2022 &middot; CS&nbsp;416</div>
 
   <div class="controls" id="stem-nav">
@@ -74,7 +74,7 @@
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="440"></svg>
   <div class="tip" id="tip"></div>
-  <div class="foot">Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
+  <div class="foot">This shows <b>association, not causation</b> — isolating any single cause (e.g. vaccines) would need death rates split by vaccination status, which this data doesn't include. &middot; Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
 </div>
 
 <script>
@@ -178,11 +178,12 @@ function drawIntro(){
   const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
   plot.append("path").datum(WORLD).attr("fill",CASE_COLOR).attr("fill-opacity",.12)
       .attr("d",d3.area().x(d=>x(d.d)).y0(ih).y1(d=>y(d.cases)));
-  const cx=iw/2, ty=ih*0.32;
-  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","28px").style("font-weight","700").style("fill","#1a1a1a").text("COVID-19: Waves, then Vaccines");
-  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("How the pandemic came in waves — and how vaccines broke");
-  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("the link between cases and deaths.");
-  anno.append("text").attr("x",cx).attr("y",ty+88).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("World, 2020–2022  ·  click Begin to start the story");
+  const cx=iw/2, ty=ih*0.30;
+  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","#1a1a1a").text("COVID-19: When Deaths Decoupled from Cases");
+  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("How the pandemic came in waves — and how cases and deaths came apart.");
+  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("Untangling why — vaccines, testing, milder variants — is the hard part.");
+  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("Shows association, not causation  ·  World, 2020–2022");
+  anno.append("text").attr("x",cx).attr("y",ty+100).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("click Begin to start the story");
 }
 
 // ============ SCENES (the martini-glass STEM) ============
@@ -205,8 +206,8 @@ const scenes = [
      vaxMarker();
      annotate(x(vaxDate),y(worldMaxCases*0.5),"Vaccine rollout",["First mass vaccinations,","then the biggest waves hit"],-40,-30);
    }},
- { title:"After vaccines, deaths decoupled from cases",
-   caption:"Scaling each curve to its own peak reveals the shift: the Omicron wave set case records, yet deaths stayed far below their earlier peaks — the link between cases and deaths had weakened.",
+ { title:"Cases and deaths decoupled",
+   caption:"Scaling each curve to its own peak reveals the shift: the Omicron wave set case records, yet deaths stayed far below their earlier peaks. Vaccines, better treatment, milder Omicron, and changing testing all contributed — this shows the decoupling, not its single cause.",
    draw:function(){
      const y=d3.scaleLinear().domain([0,100]).range([ih,0]);
      drawAxes(y,"% of that metric's own peak");
