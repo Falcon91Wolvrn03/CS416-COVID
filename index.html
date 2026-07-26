@@ -399,7 +399,7 @@ function render(){
       d3.select("#caption").text("Comparing continents — daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
     } else if(params.dview==="ratio"){
       drawRatio();
-      d3.select("#caption").text(params.region+" — reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed many mild cases; late-2022 ratios can also rise as testing wound down and reported cases fell faster than deaths.) Pick a region above; hover for values.");
+      d3.select("#caption").text(params.region+" — reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed mild cases; late-2022 ratios also rose as testing wound down and mild cases again went untested.) Pick a region above; hover for values.");
     } else {
       drawDecoupling();
       d3.select("#caption").text(params.region+" — cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
