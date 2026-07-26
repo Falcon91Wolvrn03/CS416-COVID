@@ -10,16 +10,16 @@
   .wrap{max-width:900px;margin:0 auto;padding:20px 24px 48px;position:relative;}
   h1{font-size:23px;margin:0 0 3px;}
   .sub{color:#666;font-size:13px;margin-bottom:16px;}
-  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:34px;margin:8px 0;}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:34px;margin:8px 0;}
   button{font-size:14px;padding:6px 14px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;}
   button:hover:not(:disabled){background:#f0f0f0;}
   button:disabled{opacity:.4;cursor:default;}
   .primary{border-color:#2c5aa0;color:#2c5aa0;font-weight:600;}
   .scene-title{font-weight:600;font-size:15px;}
   .scene-count{color:#888;font-size:12px;}
-  select{font-size:14px;padding:5px 8px;border:1px solid #bbb;border-radius:6px;background:#fff;}
   .toggle button{padding:5px 10px;}
   .toggle button.active{background:#2c5aa0;color:#fff;border-color:#2c5aa0;}
+  #chips button{padding:3px 10px;font-size:12.5px;border-radius:14px;}
   .hint{color:#888;font-size:12px;}
   .caption{font-size:13.5px;color:#333;min-height:42px;margin:8px 0 4px;line-height:1.45;}
   .anno-box{fill:#fff;stroke:#333;stroke-width:1;opacity:.96;}
@@ -32,7 +32,7 @@
   .legend text{font-size:11px;}
   .guide{stroke:#999;stroke-width:1;stroke-dasharray:3 2;}
   .tip{position:fixed;pointer-events:none;background:#fff;border:1px solid #666;border-radius:5px;
-       padding:5px 8px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.15);display:none;z-index:10;}
+       padding:6px 9px;font-size:12px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.15);display:none;z-index:10;}
   .foot{color:#999;font-size:11px;margin-top:12px;}
 </style>
 </head>
@@ -50,8 +50,6 @@
 
   <div class="controls" id="explore-nav" style="display:none">
     <button id="replay">&#9664; Back to the story</button>
-    <span class="hint">Country:</span>
-    <select id="country"></select>
     <span class="toggle" id="metric">
       <button data-m="cases" class="active">Cases</button>
       <button data-m="deaths">Deaths</button>
@@ -62,6 +60,7 @@
     </span>
     <span class="hint">Hover for values.</span>
   </div>
+  <div class="controls" id="chips" style="display:none"></div>
 
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="440"></svg>
@@ -90,7 +89,9 @@ const POP = {"World":7794,"United States":331,"India":1380,"Brazil":212,"United 
  "Mexico":129,"Canada":38,"Australia":26,"Sweden":10.4,"Spain":47};
 
 // ============ PARAMETERS ============  (the complete visualization state)
-var params = { scene: 0, mode: "intro", country: "World", metric: "cases", scale: "total" };
+var params = { scene: 0, mode: "intro",
+               countries: ["United States","India","Sweden","South Korea"],
+               metric: "cases", scale: "total" };
 
 // ============ LAYOUT & SCALES ============
 const W=900, H=440, m={t:16,r:24,b:40,l:66};
@@ -99,6 +100,7 @@ const g   = d3.select("#chart").append("g").attr("transform",`translate(${m.l},$
 const plot= g.append("g");
 const anno= g.append("g");
 const x   = d3.scaleTime().domain(d3.extent(DATES)).range([0,iw]);
+const color = d3.scaleOrdinal().range(d3.schemeCategory10);   // keyed by selected country
 const tip = d3.select("#tip");
 const fmtDate = d3.timeFormat("%b %-d, %Y");
 const fmtInt  = d3.format(",");
@@ -135,7 +137,6 @@ function valueAt(data,dt,acc){
   const a=data[Math.max(0,i-1)], b=data[Math.min(data.length-1,i)];
   return acc((b && dt-a.d>b.d-dt)?b:a);
 }
-// variant wave labels, placed just above the world-cases curve
 function waveLabels(y){
   [["Alpha","2021-01-11"],["Delta","2021-08-26"],["Omicron","2022-01-24"]].forEach(function(L){
     const dt=parse(L[1]), v=valueAt(WORLD,dt,d=>d.cases);
@@ -195,46 +196,61 @@ const scenes = [
    }}
 ];
 
-// ============ EXPLORE (the martini-glass BOWL) ============
+// ============ EXPLORE (the martini-glass BOWL: compare countries) ============
 function drawExplore(){
-  const data = recs(params.country);
-  const pop  = POP[params.country] || 1;
-  const factor = params.scale==="percap" ? 1/pop : 1;
-  const base = params.metric==="cases" ? (d=>d.cases) : (d=>d.deaths);
-  const acc  = d=>base(d)*factor;
-  const color= params.metric==="cases" ? "#2c5aa0" : "#c0392b";
-  const unit = params.metric + (params.scale==="percap" ? "/day per million" : "/day");
-  const ymax = d3.max(data, acc) || 1;
-  const y    = d3.scaleLinear().domain([0,ymax]).range([ih,0]);
+  const base   = params.metric==="cases" ? (d=>d.cases) : (d=>d.deaths);
+  const factorOf = c => params.scale==="percap" ? 1/(POP[c]||1) : 1;
+  const unit   = params.metric + (params.scale==="percap" ? "/day per million" : "/day");
+  color.domain(params.countries);
+  const series = params.countries.map(c => ({country:c, data:recs(c), f:factorOf(c)}));
+  const ymax   = d3.max(series, s => d3.max(s.data, d=>base(d)*s.f)) || 1;
+  const y      = d3.scaleLinear().domain([0,ymax]).range([ih,0]);
   drawAxes(y, "New "+unit+" (7-day avg)");
   vaxMarker();
-  areaLine(data,y,acc,color,.28);
 
-  const guide = plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
-  const dot   = plot.append("circle").attr("r",4).attr("fill",color).attr("stroke","#fff").style("display","none");
-  const bisect= d3.bisector(d=>d.d).left;
-  const fmt   = params.scale==="percap" ? fmtDec : fmtInt;
+  series.forEach(function(s){
+    plot.append("path").datum(s.data).attr("fill","none").attr("stroke",color(s.country)).attr("stroke-width",1.6)
+        .attr("d", d3.line().x(d=>x(d.d)).y(d=>y(base(d)*s.f)));
+  });
+
+  const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
+  series.forEach(function(s,i){
+    const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
+    row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",color(s.country));
+    row.append("text").attr("x",18).attr("y",3).text(s.country);
+  });
+
+  // hover: shared guide + focus dots + multi-row tooltip
+  const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
+  const dots = series.map(s => plot.append("circle").attr("r",3.5).attr("fill",color(s.country)).attr("stroke","#fff").style("display","none"));
+  const bisect=d3.bisector(d=>d.d).left;
+  const fmt = params.scale==="percap" ? fmtDec : fmtInt;
   plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
     .on("mousemove", function(){
-       const mx=d3.mouse(this)[0], d0=x.invert(mx), i=bisect(data,d0);
-       const a=data[Math.max(0,i-1)], b=data[Math.min(data.length-1,i)];
-       const d=(b && d0-a.d > b.d-d0) ? b : a;
-       guide.attr("x1",x(d.d)).attr("x2",x(d.d)).style("display",null);
-       dot.attr("cx",x(d.d)).attr("cy",y(acc(d))).style("display",null);
+       const d0=x.invert(d3.mouse(this)[0]);
+       var rows="", dt=null;
+       series.forEach(function(s,i){
+         const j=bisect(s.data,d0), a=s.data[Math.max(0,j-1)], b=s.data[Math.min(s.data.length-1,j)];
+         const d=(b && d0-a.d>b.d-d0)?b:a, v=base(d)*s.f; dt=d.d;
+         dots[i].attr("cx",x(d.d)).attr("cy",y(v)).style("display",null);
+         rows+="<div><span style='color:"+color(s.country)+"'>&#9632;</span> "+s.country+": <b>"+fmt(v)+"</b></div>";
+       });
+       guide.attr("x1",x(dt)).attr("x2",x(dt)).style("display",null);
        var lx=d3.event.clientX+14;
-       if(lx+150 > window.innerWidth) lx=d3.event.clientX-164;   // flip left near the right edge
+       if(lx+180 > window.innerWidth) lx=d3.event.clientX-194;
        tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+fmtDate(d.d)+"</b><br>"+fmt(acc(d))+" "+unit);
+          .html("<b>"+fmtDate(dt)+"</b> ("+unit+")"+rows);
     })
-    .on("mouseout", function(){ guide.style("display","none"); dot.style("display","none"); tip.style("display","none"); });
+    .on("mouseout", function(){ guide.style("display","none"); dots.forEach(function(dd){dd.style("display","none");}); tip.style("display","none"); });
 }
 
 // ============ RENDER ============
 function render(){
   plot.selectAll("*").remove(); anno.selectAll("*").remove(); tip.style("display","none");
-  const intro = params.mode==="intro", stem = params.mode==="stem";
-  d3.select("#stem-nav").style("display", params.mode==="explore" ? "none" : "flex");
-  d3.select("#explore-nav").style("display", params.mode==="explore" ? "flex" : "none");
+  const intro = params.mode==="intro", stem = params.mode==="stem", explore = params.mode==="explore";
+  d3.select("#stem-nav").style("display", explore ? "none" : "flex");
+  d3.select("#explore-nav").style("display", explore ? "flex" : "none");
+  d3.select("#chips").style("display", explore ? "flex" : "none");
   d3.select("#back").style("display", intro?"none":null);
   d3.select("#count").style("display", intro?"none":null);
   d3.select("#title").style("display", intro?"none":null);
@@ -253,10 +269,14 @@ function render(){
   } else {
     drawExplore();
     const per = params.scale==="percap" ? " per million people" : "";
-    d3.select("#caption").text(params.country+" — daily new "+params.metric+per+" (7-day average). Switch country, metric, or scale; hover for exact values.");
-    d3.select("#country").property("value", params.country);
+    d3.select("#caption").text("Comparing countries — daily new "+params.metric+per+" (7-day average). Click a country below to add or remove it; switch metric or scale; hover for values.");
     d3.selectAll("#metric button").classed("active", function(){ return this.getAttribute("data-m")===params.metric; });
     d3.selectAll("#scale button").classed("active", function(){ return this.getAttribute("data-s")===params.scale; });
+    color.domain(params.countries);
+    d3.selectAll("#chips button").each(function(d){
+      const on = params.countries.indexOf(d)>=0;
+      d3.select(this).style("background", on?color(d):null).style("color", on?"#fff":null).style("border-color", on?color(d):"#bbb");
+    });
   }
 }
 
@@ -270,9 +290,16 @@ d3.select("#next").on("click", function(){
 d3.select("#back").on("click", function(){ if(params.scene>0){ params.scene--; render(); } });
 d3.select("#replay").on("click", function(){ params.mode="stem"; params.scene=scenes.length-1; render(); });
 
-const sel=d3.select("#country");
-sel.selectAll("option").data(COUNTRIES).enter().append("option").attr("value",d=>d).text(d=>d);
-sel.on("change", function(){ params.country=this.value; render(); });
+// country comparison chips (multi-select)
+function toggleCountry(c){
+  const i=params.countries.indexOf(c);
+  if(i>=0){ if(params.countries.length>1) params.countries.splice(i,1); }
+  else if(params.countries.length<8){ params.countries.push(c); }
+  render();
+}
+d3.select("#chips").selectAll("button").data(COUNTRIES).enter().append("button")
+  .attr("data-c",d=>d).text(d=>d).on("click", function(d){ toggleCountry(d); });
+
 d3.selectAll("#metric button").on("click", function(){ params.metric=this.getAttribute("data-m"); render(); });
 d3.selectAll("#scale button").on("click", function(){ params.scale=this.getAttribute("data-s"); render(); });
 
