@@ -140,14 +140,20 @@ function vaxContext(cov, yCov){
   plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};}))
      .attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.4).attr("opacity",0.85)
      .attr("d", d3.line().x(function(p){return x(p.d);}).y(function(p){return yCov(p.v);}));
-  const idx=cov.findIndex(function(v){return v>=40;});
-  if(idx<0) return null;   // never reached 40% (e.g., Africa) — line alone shows the plateau
-  const dt=DATES[idx];
-  plot.append("line").attr("x1",x(dt)).attr("x2",x(dt)).attr("y1",0).attr("y2",ih)
-     .attr("stroke",VAX_COLOR).attr("stroke-width",1.3).attr("stroke-dasharray","4 3");
-  plot.append("text").attr("x",x(dt)+4).attr("y",12).style("font-size","10.5px").style("fill",VAX_COLOR)
-     .text("40% vaccinated · "+d3.timeFormat("%b %Y")(dt));
-  return dt;
+  function mark(idx, label){
+    if(idx<0) return;
+    const px=x(DATES[idx]), right=px>iw*0.62;
+    plot.append("line").attr("x1",px).attr("x2",px).attr("y1",0).attr("y2",ih)
+       .attr("stroke",VAX_COLOR).attr("stroke-width",1.3).attr("stroke-dasharray","4 3");
+    plot.append("text").attr("x",px+(right?-4:4)).attr("y",12).attr("text-anchor",right?"end":"start")
+       .style("font-size","10.5px").style("fill",VAX_COLOR).text(label);
+  }
+  const fmt=d3.timeFormat("%b %Y");
+  const iStart=cov.findIndex(function(v){return v>0;});   // rollout begins (coverage lifts off zero)
+  const i60=cov.findIndex(function(v){return v>=60;});     // 60% coverage reference
+  if(iStart>=0) mark(iStart, "Vaccination begins · "+fmt(DATES[iStart]));
+  if(i60>=0)    mark(i60,    "60% vaccinated · "+fmt(DATES[i60]));
+  return null;
 }
 function areaLine(data,y,accessor,col,fill){
   plot.append("path").datum(data).attr("fill",col).attr("fill-opacity",fill)
