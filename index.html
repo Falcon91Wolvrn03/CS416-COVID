@@ -313,9 +313,9 @@ function drawRatio(){
     let peakPt=valid[0]; valid.forEach(function(p){ if(p.r>peakPt.r) peakPt=p; });   // overall peak
     const lastVal=valid[valid.length-1].r;
     const pre=peakPt.d<vaxDate, px=x(peakPt.d), dx=px>iw*0.55?-205:55;
-    annotate(px, y(peakPt.r), "Fewer deaths per case",
-      pre ? ["~"+Math.round(peakPt.r)+" per 1,000 before vaccines,","~"+lastVal.toFixed(1)+" by late 2022"]
-          : ["Peaked near ~"+Math.round(peakPt.r)+" per 1,000,","down to ~"+lastVal.toFixed(1)+" by late 2022"],
+    annotate(px, y(peakPt.r), "Deaths per case peaked here",
+      ["~"+Math.round(peakPt.r)+" per 1,000"+(pre?" (before vaccines)":""),
+       "then fell to ~"+lastVal.toFixed(1)+" by late 2022"],
       dx, 30);
   }
   const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
