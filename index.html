@@ -56,6 +56,10 @@
       <button data-v="decoupling" class="active">Decoupling by region</button>
       <button data-v="compare">Compare continents</button>
     </span>
+    <span class="toggle" id="dmode" style="display:none">
+      <button data-d="shape" class="active">Cases vs deaths</button>
+      <button data-d="ratio">Deaths per 1,000 cases</button>
+    </span>
     <span class="toggle" id="metric" style="display:none">
       <button data-m="cases" class="active">Cases</button>
       <button data-m="deaths">Deaths</button>
@@ -92,8 +96,9 @@ const omicron  = WORLD.reduce((a,b)=> b.cases>a.cases ? b : a);
 const CASE_COLOR="#2c5aa0", DEATH_COLOR="#c0392b";
 
 // ============ PARAMETERS ============  (the complete visualization state)
-var params = { scene: 0, mode: "intro", view: "decoupling", region: "World", metric: "cases", scale: "total" };
+var params = { scene: 0, mode: "intro", view: "decoupling", region: "World", dview: "shape", metric: "cases", scale: "total" };
 const REGIONS = ["World"].concat(CONTINENTS);
+const RATIO_COLOR = "#238b45";
 
 // ============ LAYOUT & SCALES ============
 const W=900, H=440, m={t:16,r:24,b:40,l:66};
@@ -284,13 +289,49 @@ function drawDecoupling(){
     .on("mouseout", function(){ guide.style("display","none"); dc.style("display","none"); dd.style("display","none"); tip.style("display","none"); });
 }
 
+// ============ EXPLORE VIEW B (ratio): deaths per 1,000 reported cases ============
+function drawRatio(){
+  const name=params.region, data=recs(name);
+  const maxCases=d3.max(data,d=>d.cases)||1, thresh=Math.max(1, 0.02*maxCases);
+  const pts=data.map(d=>({d:d.d, cases:d.cases, deaths:d.deaths, r:(d.cases>=thresh ? 1000*d.deaths/d.cases : null)}));
+  const valid=pts.filter(p=>p.r!=null);
+  const rmax=d3.max(valid,p=>p.r)||1;
+  const y=d3.scaleLinear().domain([0,rmax*1.08]).range([ih,0]);
+  drawAxes(y,"Deaths per 1,000 reported cases");
+  vaxMarker();
+  plot.append("path").datum(pts).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9)
+      .attr("d", d3.line().defined(p=>p.r!=null).x(p=>x(p.d)).y(p=>y(p.r)));
+  if(valid.length){
+    let peakPt=valid[0]; valid.forEach(function(p){ if(p.d<vaxDate && p.r>peakPt.r) peakPt=p; });
+    const lastVal=valid[valid.length-1].r;
+    annotate(x(peakPt.d), y(peakPt.r), "Fewer deaths per case",
+      ["~"+Math.round(peakPt.r)+" per 1,000 before vaccines,","~"+lastVal.toFixed(1)+" by late 2022"], 55, 30);
+  }
+  const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
+  const dot=plot.append("circle").attr("r",4).attr("fill",RATIO_COLOR).attr("stroke","#fff").style("display","none");
+  const bisect=d3.bisector(p=>p.d).left;
+  plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
+    .on("mousemove", function(){
+       const d0=x.invert(d3.mouse(this)[0]), j=bisect(pts,d0);
+       const a=pts[Math.max(0,j-1)], b=pts[Math.min(pts.length-1,j)], p=(b && d0-a.d>b.d-d0)?b:a;
+       guide.attr("x1",x(p.d)).attr("x2",x(p.d)).style("display",null);
+       if(p.r!=null){ dot.attr("cx",x(p.d)).attr("cy",y(p.r)).style("display",null); } else { dot.style("display","none"); }
+       var lx=d3.event.clientX+14; if(lx+230>window.innerWidth) lx=d3.event.clientX-244;
+       tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
+          .html("<b>"+name+" — "+fmtDate(p.d)+"</b><br>"+(p.r!=null
+             ? "<span style='color:"+RATIO_COLOR+"'>&#9632;</span> "+p.r.toFixed(1)+" deaths per 1,000 cases<br><span style='color:#888'>"+fmtInt(p.cases)+" cases, "+fmtInt(p.deaths)+" deaths/day</span>"
+             : "too few cases to compute a ratio"));
+    })
+    .on("mouseout", function(){ guide.style("display","none"); dot.style("display","none"); tip.style("display","none"); });
+}
+
 // ============ RENDER ============
 function render(){
   plot.selectAll("*").remove(); anno.selectAll("*").remove(); tip.style("display","none");
   const intro = params.mode==="intro", stem = params.mode==="stem", explore = params.mode==="explore";
   d3.select("#stem-nav").style("display", explore ? "none" : "flex");
   d3.select("#explore-nav").style("display", explore ? "flex" : "none");
-  if(!explore) d3.select("#region").style("display","none");
+  if(!explore){ d3.select("#region").style("display","none"); d3.select("#dmode").style("display","none"); }
   d3.select("#back").style("display", intro?"none":null);
   d3.select("#count").style("display", intro?"none":null);
   d3.select("#title").style("display", intro?"none":null);
@@ -310,15 +351,20 @@ function render(){
     const compare = params.view==="compare";
     d3.select("#metric").style("display", compare?null:"none");
     d3.select("#scale").style("display", compare?null:"none");
+    d3.select("#dmode").style("display", compare?"none":null);
     d3.select("#region").style("display", compare?"none":"flex");
     if(compare){
       drawCompare();
       d3.select("#caption").text("Comparing continents — daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
+    } else if(params.dview==="ratio"){
+      drawRatio();
+      d3.select("#caption").text(params.region+" — reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed many mild cases.) Pick a region above; hover for values.");
     } else {
       drawDecoupling();
       d3.select("#caption").text(params.region+" — cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
     }
     d3.selectAll("#view button").classed("active", function(){ return this.getAttribute("data-v")===params.view; });
+    d3.selectAll("#dmode button").classed("active", function(){ return this.getAttribute("data-d")===params.dview; });
     d3.selectAll("#region button").classed("active", function(){ return this.getAttribute("data-r")===params.region; });
     d3.selectAll("#metric button").classed("active", function(){ return this.getAttribute("data-m")===params.metric; });
     d3.selectAll("#scale button").classed("active", function(){ return this.getAttribute("data-s")===params.scale; });
@@ -337,6 +383,7 @@ d3.select("#replay").on("click", function(){ params.mode="stem"; params.scene=sc
 d3.select("#region").selectAll("button").data(REGIONS).enter().append("button")
   .attr("data-r",d=>d).text(d=>d).on("click", function(d){ params.region=d; render(); });
 d3.selectAll("#view button").on("click", function(){ params.view=this.getAttribute("data-v"); render(); });
+d3.selectAll("#dmode button").on("click", function(){ params.dview=this.getAttribute("data-d"); render(); });
 d3.selectAll("#metric button").on("click", function(){ params.metric=this.getAttribute("data-m"); render(); });
 d3.selectAll("#scale button").on("click", function(){ params.scale=this.getAttribute("data-s"); render(); });
 
