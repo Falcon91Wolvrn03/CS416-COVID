@@ -293,7 +293,9 @@ function drawDecoupling(){
 function drawRatio(){
   const name=params.region, data=recs(name);
   const maxCases=d3.max(data,d=>d.cases)||1, thresh=Math.max(1, 0.02*maxCases);
-  const pts=data.map(d=>({d:d.d, cases:d.cases, deaths:d.deaths, r:(d.cases>=thresh ? 1000*d.deaths/d.cases : null)}));
+  let start=data.findIndex(d=>d.cases>=thresh); if(start<0) start=0;   // first week with enough cases
+  const pts=data.map(function(d,i){ return {d:d.d, cases:d.cases, deaths:d.deaths,
+    r:((i>=start && d.cases>0) ? 1000*d.deaths/d.cases : null)}; });   // continuous after start (no interior gaps)
   const valid=pts.filter(p=>p.r!=null);
   const rmax=d3.max(valid,p=>p.r)||1;
   const y=d3.scaleLinear().domain([0,rmax*1.08]).range([ih,0]);
