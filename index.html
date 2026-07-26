@@ -19,6 +19,8 @@
   .scene-count{color:#888;font-size:12px;}
   .toggle button{padding:5px 10px;}
   .toggle button.active{background:#2c5aa0;color:#fff;border-color:#2c5aa0;}
+  #region button{padding:4px 11px;font-size:12.5px;border-radius:14px;}
+  #region button.active{background:#2c5aa0;color:#fff;border-color:#2c5aa0;}
   .hint{color:#888;font-size:12px;}
   .caption{font-size:13.5px;color:#333;min-height:42px;margin:8px 0 4px;line-height:1.45;}
   .anno-box{fill:#fff;stroke:#333;stroke-width:1;opacity:.96;}
@@ -51,7 +53,7 @@
   <div class="controls" id="explore-nav" style="display:none">
     <button id="replay">&#9664; Back to the story</button>
     <span class="toggle" id="view">
-      <button data-v="decoupling" class="active">Decoupling by continent</button>
+      <button data-v="decoupling" class="active">Decoupling by region</button>
       <button data-v="compare">Compare continents</button>
     </span>
     <span class="toggle" id="metric" style="display:none">
@@ -63,6 +65,7 @@
       <button data-s="percap">Per million</button>
     </span>
   </div>
+  <div class="controls" id="region" style="display:none"></div>
 
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="440"></svg>
@@ -89,7 +92,8 @@ const omicron  = WORLD.reduce((a,b)=> b.cases>a.cases ? b : a);
 const CASE_COLOR="#2c5aa0", DEATH_COLOR="#c0392b";
 
 // ============ PARAMETERS ============  (the complete visualization state)
-var params = { scene: 0, mode: "intro", view: "decoupling", metric: "cases", scale: "total" };
+var params = { scene: 0, mode: "intro", view: "decoupling", region: "World", metric: "cases", scale: "total" };
+const REGIONS = ["World"].concat(CONTINENTS);
 
 // ============ LAYOUT & SCALES ============
 const W=900, H=440, m={t:16,r:24,b:40,l:66};
@@ -237,58 +241,47 @@ function drawCompare(){
     .on("mouseout", function(){ guide.style("display","none"); dots.forEach(function(dd){dd.style("display","none");}); tip.style("display","none"); });
 }
 
-// ============ EXPLORE VIEW B: decoupling by continent (small multiples) ============
-function panel(name, px, py, pw, ph){
-  const data=recs(name);
+// ============ EXPLORE VIEW B: decoupling for a chosen region (Scene-3 view) ============
+function drawDecoupling(){
+  const name=params.region, data=recs(name);
   const maxC=d3.max(data,d=>d.cases)||1, maxD=d3.max(data,d=>d.deaths)||1;
-  const xp=d3.scaleTime().domain(x.domain()).range([px,px+pw]);
-  const yp=d3.scaleLinear().domain([0,100]).range([py+ph,py]);
-  plot.append("text").attr("class","panel-title").attr("x",px).attr("y",py-5).text(name);
-  plot.append("line").attr("x1",px).attr("x2",px+pw).attr("y1",py).attr("y2",py).attr("stroke","#eee");
-  plot.append("line").attr("x1",px).attr("x2",px+pw).attr("y1",py+ph).attr("y2",py+ph).attr("stroke","#ccc");
-  [2021,2022].forEach(function(yr){ const tx=xp(parse(yr+"-01-01"));
-    plot.append("line").attr("x1",tx).attr("x2",tx).attr("y1",py+ph).attr("y2",py+ph+3).attr("stroke","#bbb");
-    plot.append("text").attr("x",tx).attr("y",py+ph+13).attr("text-anchor","middle").style("font-size","9px").style("fill","#888").text(yr); });
-  plot.append("line").attr("class","vax-line").attr("x1",xp(vaxDate)).attr("x2",xp(vaxDate)).attr("y1",py).attr("y2",py+ph);
-  plot.append("path").datum(data).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.3)
-      .attr("d",d3.line().x(d=>xp(d.d)).y(d=>yp(100*d.cases/maxC)));
-  plot.append("path").datum(data).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.3)
-      .attr("d",d3.line().x(d=>xp(d.d)).y(d=>yp(100*d.deaths/maxD)));
+  const y=d3.scaleLinear().domain([0,100]).range([ih,0]);
+  drawAxes(y,"% of that metric's own peak");
+  vaxMarker();
+  plot.append("path").datum(data).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
+      .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.cases/maxC)));
+  plot.append("path").datum(data).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
+      .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.deaths/maxD)));
+  const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
+  [["Cases",CASE_COLOR],["Deaths",DEATH_COLOR]].forEach(function(e,i){
+    const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
+    row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",e[1]);
+    row.append("text").attr("x",18).attr("y",3).text(e[0]);
+  });
+  // annotation at the region's biggest case wave
+  const peak=data.reduce((a,b)=>b.cases>a.cases?b:a);
+  const dpk=Math.round(100*peak.deaths/maxD);
+  annotate(x(peak.d), y(100), "Biggest case wave", ["Cases at 100% of their peak —","deaths only "+dpk+"% of theirs"], -40, 72);
+  // hover
+  const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
+  const dc=plot.append("circle").attr("r",4).attr("fill",CASE_COLOR).attr("stroke","#fff").style("display","none");
+  const dd=plot.append("circle").attr("r",4).attr("fill",DEATH_COLOR).attr("stroke","#fff").style("display","none");
   const bisect=d3.bisector(d=>d.d).left;
-  const guide=plot.append("line").attr("class","guide").attr("y1",py).attr("y2",py+ph).style("display","none");
-  const dc=plot.append("circle").attr("r",3).attr("fill",CASE_COLOR).attr("stroke","#fff").style("display","none");
-  const dd=plot.append("circle").attr("r",3).attr("fill",DEATH_COLOR).attr("stroke","#fff").style("display","none");
-  plot.append("rect").attr("x",px).attr("y",py).attr("width",pw).attr("height",ph).attr("fill","none").style("pointer-events","all")
+  plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
     .on("mousemove", function(){
-       const d0=xp.invert(d3.mouse(this)[0]), j=bisect(data,d0);
+       const d0=x.invert(d3.mouse(this)[0]), j=bisect(data,d0);
        const a=data[Math.max(0,j-1)], b=data[Math.min(data.length-1,j)], d=(b && d0-a.d>b.d-d0)?b:a;
        const cp=Math.round(100*d.cases/maxC), dp=Math.round(100*d.deaths/maxD);
-       guide.attr("x1",xp(d.d)).attr("x2",xp(d.d)).style("display",null);
-       dc.attr("cx",xp(d.d)).attr("cy",yp(100*d.cases/maxC)).style("display",null);
-       dd.attr("cx",xp(d.d)).attr("cy",yp(100*d.deaths/maxD)).style("display",null);
+       guide.attr("x1",x(d.d)).attr("x2",x(d.d)).style("display",null);
+       dc.attr("cx",x(d.d)).attr("cy",y(100*d.cases/maxC)).style("display",null);
+       dd.attr("cx",x(d.d)).attr("cy",y(100*d.deaths/maxD)).style("display",null);
        var lx=d3.event.clientX+14; if(lx+210>window.innerWidth) lx=d3.event.clientX-224;
        tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+name+"</b> — "+fmtDate(d.d)
+          .html("<b>"+name+" — "+fmtDate(d.d)+"</b>"
                +"<br><span style='color:"+CASE_COLOR+"'>&#9632;</span> Cases: "+cp+"% of peak ("+fmtInt(d.cases)+"/day)"
                +"<br><span style='color:"+DEATH_COLOR+"'>&#9632;</span> Deaths: "+dp+"% of peak ("+fmtInt(d.deaths)+"/day)");
     })
     .on("mouseout", function(){ guide.style("display","none"); dc.style("display","none"); dd.style("display","none"); tip.style("display","none"); });
-}
-function drawSmallMultiples(){
-  const lg=plot.append("g").attr("class","legend").attr("transform","translate(0,2)");
-  [["Cases",CASE_COLOR],["Deaths",DEATH_COLOR]].forEach(function(e,i){
-    const row=lg.append("g").attr("transform","translate("+(i*82)+",0)");
-    row.append("rect").attr("width",12).attr("height",3).attr("y",-3).attr("fill",e[1]);
-    row.append("text").attr("x",18).attr("y",1).text(e[0]);
-  });
-  const cols=3, rows=2, gapX=32, gapY=42, titleH=16, labelH=16, legendH=18;
-  const pw=(iw-(cols-1)*gapX)/cols;
-  const ph=((ih-legendH) - (rows-1)*gapY - rows*(titleH+labelH))/rows;
-  CONTINENTS.forEach(function(name,i){
-    const col=i%cols, row=Math.floor(i/cols);
-    const cellTop=legendH + row*(titleH+ph+labelH+gapY);
-    panel(name, col*(pw+gapX), cellTop+titleH, pw, ph);
-  });
 }
 
 // ============ RENDER ============
@@ -297,6 +290,7 @@ function render(){
   const intro = params.mode==="intro", stem = params.mode==="stem", explore = params.mode==="explore";
   d3.select("#stem-nav").style("display", explore ? "none" : "flex");
   d3.select("#explore-nav").style("display", explore ? "flex" : "none");
+  if(!explore) d3.select("#region").style("display","none");
   d3.select("#back").style("display", intro?"none":null);
   d3.select("#count").style("display", intro?"none":null);
   d3.select("#title").style("display", intro?"none":null);
@@ -316,14 +310,16 @@ function render(){
     const compare = params.view==="compare";
     d3.select("#metric").style("display", compare?null:"none");
     d3.select("#scale").style("display", compare?null:"none");
+    d3.select("#region").style("display", compare?"none":"flex");
     if(compare){
       drawCompare();
       d3.select("#caption").text("Comparing continents — daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
     } else {
-      drawSmallMultiples();
-      d3.select("#caption").text("Did the decoupling happen everywhere? Each panel is one continent — cases (blue) and deaths (red), each scaled to its own peak. In every region, deaths fall well below cases after the vaccine line. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Hover any panel for exact values.");
+      drawDecoupling();
+      d3.select("#caption").text(params.region+" — cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
     }
     d3.selectAll("#view button").classed("active", function(){ return this.getAttribute("data-v")===params.view; });
+    d3.selectAll("#region button").classed("active", function(){ return this.getAttribute("data-r")===params.region; });
     d3.selectAll("#metric button").classed("active", function(){ return this.getAttribute("data-m")===params.metric; });
     d3.selectAll("#scale button").classed("active", function(){ return this.getAttribute("data-s")===params.scale; });
   }
@@ -338,6 +334,8 @@ d3.select("#next").on("click", function(){
 });
 d3.select("#back").on("click", function(){ if(params.scene>0){ params.scene--; render(); } });
 d3.select("#replay").on("click", function(){ params.mode="stem"; params.scene=scenes.length-1; render(); });
+d3.select("#region").selectAll("button").data(REGIONS).enter().append("button")
+  .attr("data-r",d=>d).text(d=>d).on("click", function(d){ params.region=d; render(); });
 d3.selectAll("#view button").on("click", function(){ params.view=this.getAttribute("data-v"); render(); });
 d3.selectAll("#metric button").on("click", function(){ params.metric=this.getAttribute("data-m"); render(); });
 d3.selectAll("#scale button").on("click", function(){ params.scale=this.getAttribute("data-s"); render(); });
