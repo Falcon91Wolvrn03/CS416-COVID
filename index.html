@@ -1,9 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>COVID-19: When Deaths Decoupled from Cases</title>
+<!DOCTYPE html>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <style>
   body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:0;color:#222;background:#fafafa;}
@@ -37,8 +32,6 @@
        padding:6px 9px;font-size:12px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.15);display:none;z-index:10;}
   .foot{color:#999;font-size:11px;margin-top:12px;}
 </style>
-</head>
-<body>
 <div class="wrap">
   <h1>COVID-19: When Deaths Decoupled from Cases</h1>
   <div class="sub">A narrative visualization of worldwide COVID-19, 2020&ndash;2022 &middot; CS&nbsp;416</div>
@@ -74,7 +67,7 @@
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="440"></svg>
   <div class="tip" id="tip"></div>
-  <div class="foot">This shows <b>association, not causation</b> — isolating any single cause (e.g. vaccines) would need death rates split by vaccination status, which this data doesn't include. &middot; Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
+  <div class="foot">This shows <b>association, not causation</b> - isolating any single cause (e.g. vaccines) would need death rates split by vaccination status, which this data doesn't include. &middot; Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
 </div>
 
 <script>
@@ -151,8 +144,8 @@ function vaxContext(cov, yCov){
   const fmt=d3.timeFormat("%b %Y");
   const iStart=cov.findIndex(function(v){return v>0;});   // rollout begins (coverage lifts off zero)
   const i60=cov.findIndex(function(v){return v>=60;});     // 60% coverage reference
-  if(iStart>=0) mark(iStart, "Vaccination begins · "+fmt(DATES[iStart]));
-  if(i60>=0)    mark(i60,    "60% vaccinated · "+fmt(DATES[i60]));
+  if(iStart>=0) mark(iStart, "Vaccination begins - "+fmt(DATES[iStart]));
+  if(i60>=0)    mark(i60,    "60% vaccinated - "+fmt(DATES[i60]));
   return null;
 }
 function areaLine(data,y,accessor,col,fill){
@@ -180,16 +173,16 @@ function drawIntro(){
       .attr("d",d3.area().x(d=>x(d.d)).y0(ih).y1(d=>y(d.cases)));
   const cx=iw/2, ty=ih*0.30;
   anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","#1a1a1a").text("COVID-19: When Deaths Decoupled from Cases");
-  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("How the pandemic came in waves — and how cases and deaths came apart.");
-  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("Untangling why — vaccines, testing, milder variants — is the hard part.");
-  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("Shows association, not causation  ·  World, 2020–2022");
+  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("How the pandemic came in waves - and how cases and deaths came apart.");
+  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("Untangling why - vaccines, testing, milder variants - is the hard part.");
+  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("Shows association, not causation  -  World, 2020-2022");
   anno.append("text").attr("x",cx).attr("y",ty+100).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("click Begin to start the story");
 }
 
 // ============ SCENES (the martini-glass STEM) ============
 const scenes = [
  { title:"COVID arrived in waves",
-   caption:"Worldwide reported cases did not climb steadily — they came in a series of distinct global waves, each driven by a new variant.",
+   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each driven by a new variant.",
    draw:function(){
      const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
      drawAxes(y,"New cases / day (7-day avg)");
@@ -198,7 +191,7 @@ const scenes = [
      annotate(x(parse("2020-08-01")),y(valueAt(WORLD,parse("2020-08-01"),d=>d.cases)),"Waves, not a steady climb",["Each hump is a separate surge,","driven by a new variant"],-150,-300);
    }},
  { title:"Vaccines begin rolling out (Dec 2020)",
-   caption:"Mass vaccination began in December 2020 — about a year into the pandemic, and before the two largest case waves.",
+   caption:"Mass vaccination began in December 2020 - about a year into the pandemic, and before the two largest case waves.",
    draw:function(){
      const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
      drawAxes(y,"New cases / day (7-day avg)");
@@ -207,7 +200,7 @@ const scenes = [
      annotate(x(vaxDate),y(worldMaxCases*0.5),"Vaccine rollout",["First mass vaccinations,","then the biggest waves hit"],-40,-30);
    }},
  { title:"Cases and deaths decoupled",
-   caption:"Scaling each curve to its own peak reveals the shift: the Omicron wave set case records, yet deaths stayed far below their earlier peaks. Vaccines, better treatment, milder Omicron, and changing testing all contributed — this shows the decoupling, not its single cause.",
+   caption:"Scaling each curve to its own peak reveals the shift: the Omicron wave set case records, yet deaths stayed far below their earlier peaks. Vaccines, better treatment, milder Omicron, and changing testing all contributed - this shows the decoupling, not its single cause.",
    draw:function(){
      const y=d3.scaleLinear().domain([0,100]).range([ih,0]);
      drawAxes(y,"% of that metric's own peak");
@@ -289,7 +282,7 @@ function drawDecoupling(){
   // annotation at the region's biggest case wave
   const peak=data.reduce((a,b)=>b.cases>a.cases?b:a);
   const dpk=Math.round(100*peak.deaths/maxD);
-  annotate(x(peak.d), y(100), "Biggest case wave", ["Cases at 100% of their peak —","deaths only "+dpk+"% of theirs"], -40, 72);
+  annotate(x(peak.d), y(100), "Biggest case wave", ["Cases at 100% of their peak -","deaths only "+dpk+"% of theirs"], -40, 72);
   // hover
   const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
   const dc=plot.append("circle").attr("r",4).attr("fill",CASE_COLOR).attr("stroke","#fff").style("display","none");
@@ -306,7 +299,7 @@ function drawDecoupling(){
        dd.attr("cx",x(d.d)).attr("cy",y(100*d.deaths/maxD)).style("display",null);
        var lx=d3.event.clientX+14; if(lx+210>window.innerWidth) lx=d3.event.clientX-224;
        tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+name+" — "+fmtDate(d.d)+"</b>"
+          .html("<b>"+name+" - "+fmtDate(d.d)+"</b>"
                +"<br><span style='color:"+CASE_COLOR+"'>&#9632;</span> Cases: "+cp+"% of peak ("+fmtInt(d.cases)+"/day)"
                +"<br><span style='color:"+DEATH_COLOR+"'>&#9632;</span> Deaths: "+dp+"% of peak ("+fmtInt(d.deaths)+"/day)"
                +"<br><span style='color:"+VAX_COLOR+"'>&#9632;</span> Vaccinated: "+vc+"%");
@@ -359,7 +352,7 @@ function drawRatio(){
        if(p.r!=null){ dot.attr("cx",x(p.d)).attr("cy",y(p.r)).style("display",null); } else { dot.style("display","none"); }
        var lx=d3.event.clientX+14; if(lx+230>window.innerWidth) lx=d3.event.clientX-244;
        tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+name+" — "+fmtDate(p.d)+"</b><br>"+(p.r!=null
+          .html("<b>"+name+" - "+fmtDate(p.d)+"</b><br>"+(p.r!=null
              ? "<span style='color:"+RATIO_COLOR+"'>&#9632;</span> "+p.r.toFixed(1)+" deaths per 1,000 cases<br>"
              : "too few cases to compute a ratio<br>")
              +"<span style='color:"+VAX_COLOR+"'>&#9632;</span> Vaccinated: "+vc+"%");
@@ -397,13 +390,13 @@ function render(){
     d3.select("#region").style("display", compare?"none":"flex");
     if(compare){
       drawCompare();
-      d3.select("#caption").text("Comparing continents — daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
+      d3.select("#caption").text("Comparing continents - daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
     } else if(params.dview==="ratio"){
       drawRatio();
-      d3.select("#caption").text(params.region+" — reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed mild cases; late-2022 ratios also rose as testing wound down and mild cases again went untested.) Pick a region above; hover for values.");
+      d3.select("#caption").text(params.region+" - reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed mild cases; late-2022 ratios also rose as testing wound down and mild cases again went untested.) Pick a region above; hover for values.");
     } else {
       drawDecoupling();
-      d3.select("#caption").text(params.region+" — cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
+      d3.select("#caption").text(params.region+" - cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
     }
     d3.selectAll("#view button").classed("active", function(){ return this.getAttribute("data-v")===params.view; });
     d3.selectAll("#dmode button").classed("active", function(){ return this.getAttribute("data-d")===params.dview; });
@@ -431,5 +424,3 @@ d3.selectAll("#scale button").on("click", function(){ params.scale=this.getAttri
 
 render();
 </script>
-</body>
-</html>
