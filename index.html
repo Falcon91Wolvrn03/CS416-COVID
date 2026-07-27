@@ -127,7 +127,7 @@ function vaxMarker(){
   plot.append("line").attr("class","vax-line").attr("x1",x(vaxDate)).attr("x2",x(vaxDate)).attr("y1",0).attr("y2",ih);
   plot.append("text").attr("class","vax-label").attr("x",x(vaxDate)+4).attr("y",12).text("Vaccines, Dec 2020");
 }
-// per-region vaccination context: coverage line (drawn on yCov, a 0-100 scale) + a marker at the 40% crossing
+// per-region vaccination context: coverage line (drawn on yCov, a 0-100 scale) + markers at rollout-start and 60%
 function vaxContext(cov, yCov){
   if(!cov || !cov.length) return null;
   plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};}))
