@@ -1,37 +1,16 @@
 <!DOCTYPE html>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <style>
-  body{font-family:sans-serif;margin:0;color:#222;background:#fafafa;}
-  .wrap{max-width:900px;margin:0 auto;padding:20px 24px 48px;}
-  h1{font-size:23px;margin:0 0 3px;}
-  .sub{color:#666;font-size:13px;margin-bottom:16px;}
-  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:34px;margin:8px 0;}
-  button{font-size:14px;padding:6px 14px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;}
-  button:disabled{opacity:.4;cursor:default;}
-  .primary{border-color:#2c5aa0;color:#2c5aa0;font-weight:600;}
-  .scene-title{font-weight:600;font-size:15px;}
-  .scene-count{color:#888;font-size:12px;}
-  .toggle button{padding:5px 10px;}
-  .toggle button.active{background:#2c5aa0;color:#fff;border-color:#2c5aa0;}
-  #region button{padding:4px 11px;font-size:12.5px;border-radius:14px;}
-  #region button.active{background:#2c5aa0;color:#fff;border-color:#2c5aa0;}
-  .hint{color:#888;font-size:12px;}
-  .caption{font-size:13.5px;color:#333;min-height:42px;margin:8px 0 4px;line-height:1.45;}
-  .anno-box{fill:#fff;stroke:#333;stroke-width:1;opacity:.96;}
-  .anno-title{font-weight:700;font-size:12px;}
-  .anno-text{font-size:11px;}
-  .anno-line{stroke:#333;stroke-width:1;}
-  .wave-label{font-size:11px;font-style:italic;fill:#555;}
-  .vax-line{stroke:#c0392b;stroke-width:1.5;stroke-dasharray:4 3;}
-  .vax-label{fill:#c0392b;font-size:10.5px;}
-  .legend text{font-size:11px;}
-  .guide{stroke:#999;stroke-width:1;stroke-dasharray:3 2;}
-  .tip{position:fixed;pointer-events:none;background:#fff;border:1px solid #666;border-radius:5px;
-       padding:6px 9px;font-size:12px;line-height:1.5;box-shadow:0 2px 6px rgba(0,0,0,.15);display:none;z-index:10;}
-  .foot{color:#999;font-size:11px;margin-top:12px;}
+  .anno-box{fill:white;stroke:black;}
+  .vax-line{stroke:darkgray;stroke-dasharray:4 3;}
+  .tip{position:fixed;pointer-events:none;background:white;display:none;}
+  button.active{font-weight:bold;background:dimgray;color:white;}
+  .controls{gap:10px;align-items:center;flex-wrap:wrap;}
+  #region{display:flex;gap:6px;flex-wrap:wrap;}
+  #title{display:inline-block;min-width:175px;}
 </style>
 <div class="wrap">
-  <h1>COVID-19: When Deaths Decoupled from Cases</h1>
+  <h1>A closer look at COVID-19: cases, deaths, and vaccination</h1>
   <div class="sub">A narrative visualization of worldwide COVID-19, 2020&ndash;2022 &middot; CS&nbsp;416</div>
 
   <div class="controls" id="stem-nav">
@@ -43,29 +22,13 @@
 
   <div class="controls" id="explore-nav" style="display:none">
     <button id="replay">&#9664; Back to the story</button>
-    <span class="toggle" id="view">
-      <button data-v="decoupling" class="active">Decoupling by region</button>
-      <button data-v="compare">Compare continents</button>
-    </span>
-    <span class="toggle" id="dmode" style="display:none">
-      <button data-d="shape" class="active">Cases vs deaths</button>
-      <button data-d="ratio">Deaths per 1,000 cases</button>
-    </span>
-    <span class="toggle" id="metric" style="display:none">
-      <button data-m="cases" class="active">Cases</button>
-      <button data-m="deaths">Deaths</button>
-    </span>
-    <span class="toggle" id="scale" style="display:none">
-      <button data-s="total" class="active">Total</button>
-      <button data-s="percap">Per million</button>
-    </span>
+    <span id="region"></span>
   </div>
-  <div class="controls" id="region" style="display:none"></div>
 
   <div class="caption" id="caption"></div>
-  <svg id="chart" width="900" height="440"></svg>
+  <svg id="chart" width="900" height="456"></svg>
   <div class="tip" id="tip"></div>
-  <div class="foot">This shows <b>association, not causation</b> - isolating any single cause (e.g. vaccines) would need death rates split by vaccination status, which this data doesn't include. &middot; Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
+  <div class="foot">This shows <b>association, not causation</b>. &middot; Data: Johns Hopkins University CSSE (daily new cases/deaths, 7-day average, sampled weekly); vaccination coverage (share with &ge;1 dose) from Our World in Data.</div>
 </div>
 
 <script>
@@ -74,44 +37,45 @@ const RAW = {"dates":["2020-01-22","2020-01-29","2020-02-05","2020-02-12","2020-
 const parse = d3.timeParse("%Y-%m-%d");
 const DATES = RAW.dates.map(parse);
 const CONTINENTS = RAW.continents;
-const POP = RAW.pop;                                   // millions, for the per-million toggle
-function recs(name){
+const POPULATION = RAW.pop;                                   // millions, for the per-million toggle
+function getRecords(name){
   const s = RAW.series[name];
   return DATES.map((d,i)=>({d:d, cases:s.cases[i], deaths:s.deaths[i]}));
 }
-const WORLD = recs("World");
+const WORLD = getRecords("World");
 const worldMaxCases  = d3.max(WORLD, d=>d.cases);
 const worldMaxDeaths = d3.max(WORLD, d=>d.deaths);
 const vaxDate  = parse("2020-12-14");
 const omicron  = WORLD.reduce((a,b)=> b.cases>a.cases ? b : a);
-const CASE_COLOR="#2c5aa0", DEATH_COLOR="#c0392b";
+const CASE_COLOR="cornflowerblue", DEATH_COLOR="chocolate";  // Okabe-Ito (colorblind-safe): sky-blue / vermillion
 
 // ============ PARAMETERS ============  (the complete visualization state)
-var params = { scene: 0, mode: "intro", view: "decoupling", region: "World", dview: "shape", metric: "cases", scale: "total" };
+var params = { scene: 0, mode: "intro", region: "World" };
 const REGIONS = ["World"].concat(CONTINENTS);
-const RATIO_COLOR = "#238b45";
-const VAX_COLOR = "#8856a7";
+const RATIO_MAX = 100;  // deaths-per-1,000 shares the left 0-100 axis; values above 100 (Europe's early spike) clamp to the top
+const RATIO_COLOR = "crimson";  // Okabe-Ito bluish-green
+const VAX_COLOR = "gold";     // Okabe-Ito yellow (was purple; yellow is far more distinct from blue)
 
 // ============ LAYOUT & SCALES ============
-const W=900, H=440, m={t:16,r:46,b:40,l:66};
-const iw=W-m.l-m.r, ih=H-m.t-m.b;
-const g   = d3.select("#chart").append("g").attr("transform",`translate(${m.l},${m.t})`);
+const W=900, H=456, margin={t:16,r:46,b:40,l:66};
+const iw=W-margin.l-margin.r, ih=H-margin.t-margin.b;
+const g   = d3.select("#chart").append("g").attr("transform",`translate(${margin.l},${margin.t})`);
 const plot= g.append("g");
 const anno= g.append("g");
 const x   = d3.scaleTime().domain(d3.extent(DATES)).range([0,iw]);
-const color = d3.scaleOrdinal(d3.schemeCategory10).domain(CONTINENTS);
+const color = d3.scaleOrdinal(["cornflowerblue","chocolate","teal","orange","gold","palevioletred"]).domain(CONTINENTS);
 const tip = d3.select("#tip");
 const fmtDate = d3.timeFormat("%b %-d, %Y");
 const fmtInt  = d3.format(",");
 const fmtDec  = d3.format(",.1f");
 
 // ============ ANNOTATION TEMPLATE ============
-function annotate(px,py,title,lines,dx,dy){
+function annotate(px,py,title,lines,dx,dy,noAnchor){
   const bw=220, lh=14, bh=18+lines.length*lh;
   let bx=px+dx, by=py+dy;
   bx=Math.max(0,Math.min(iw-bw,bx)); by=Math.max(0,Math.min(ih-bh,by));
   anno.append("line").attr("class","anno-line").attr("x1",px).attr("y1",py).attr("x2",bx+bw/2).attr("y2",by<py?by+bh:by);
-  anno.append("circle").attr("cx",px).attr("cy",py).attr("r",5).attr("fill","none").attr("stroke","#333").attr("stroke-width",1.4);
+  if(!noAnchor) anno.append("circle").attr("cx",px).attr("cy",py).attr("r",5).attr("fill","none").attr("stroke","black").attr("stroke-width",1.4);
   anno.append("rect").attr("class","anno-box").attr("x",bx).attr("y",by).attr("width",bw).attr("height",bh).attr("rx",4);
   anno.append("text").attr("class","anno-title").attr("x",bx+8).attr("y",by+15).text(title);
   lines.forEach((l,i)=>anno.append("text").attr("class","anno-text").attr("x",bx+8).attr("y",by+15+lh+i*lh).text(l));
@@ -119,11 +83,37 @@ function annotate(px,py,title,lines,dx,dy){
 function drawAxes(y,ylabel){
   plot.append("g").attr("transform",`translate(0,${ih})`).call(d3.axisBottom(x).ticks(8));
   plot.append("g").call(d3.axisLeft(y).tickFormat(d3.format("~s")));
-  plot.append("text").attr("transform","rotate(-90)").attr("x",-ih/2).attr("y",-52).attr("text-anchor","middle").style("font-size","12px").text(ylabel);
+  if(ylabel) plot.append("text").attr("transform","rotate(-90)").attr("x",-ih/2).attr("y",-52).attr("text-anchor","middle").style("font-size","12px").text(ylabel);
+}
+// deaths-per-1,000 line: solid where on-scale, dotted only along the clamped flat top (off-scale, e.g. Europe's early spike)
+function ratioLinePath(pts, ys){
+  const CAP=RATIO_MAX;
+  // insert a synthetic point exactly at the cap wherever the line crosses it, so solid/dotted split precisely on the cap line
+  const aug=[];
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i]; aug.push(p);
+    const q=pts[i+1];
+    if(p && q && p.r!=null && q.r!=null && ((p.r<CAP&&q.r>CAP)||(p.r>CAP&&q.r<CAP))){
+      const f=(CAP-p.r)/(q.r-p.r);
+      aug.push({d:new Date(p.d.getTime()+f*(q.d.getTime()-p.d.getTime())), r:CAP});
+    }
+  }
+  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9)
+      .attr("d",d3.line().defined(p=>p.r!=null && p.r<=CAP).x(p=>x(p.d)).y(p=>ys(p.r)));
+  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9).attr("stroke-dasharray","2 2")
+      .attr("d",d3.line().defined(p=>p.r!=null && p.r>=CAP).x(p=>x(p.d)).y(p=>ys(CAP)));
 }
 function vaxMarker(){
   plot.append("line").attr("class","vax-line").attr("x1",x(vaxDate)).attr("x2",x(vaxDate)).attr("y1",0).attr("y2",ih);
-  plot.append("text").attr("class","vax-label").attr("x",x(vaxDate)+4).attr("y",12).text("Vaccines, Dec 2020");
+  plot.append("text").attr("class","vax-label").attr("x",x(vaxDate)+4).attr("y",12).style("font-size","11px").text("Vaccines, Dec 2020");
+}
+// vertical marker at the week World coverage first reaches 60% (gold dashed, matches the vaccination line)
+function sixtyMarker(){
+  const cov=RAW.vax["World"]||[], i60=cov.findIndex(function(v){return v>=60;});
+  if(i60<0) return;
+  const px=x(DATES[i60]), right=px>iw*0.62;
+  plot.append("line").attr("class","vax-line").attr("x1",px).attr("x2",px).attr("y1",0).attr("y2",ih);
+  plot.append("text").attr("class","vax-label").attr("x",px+(right?-4:4)).attr("y",12).attr("text-anchor",right?"end":"start").style("font-size","11px").text("60% vaccinated, "+d3.timeFormat("%b %Y")(DATES[i60]));
 }
 // per-region vaccination context: coverage line (drawn on yCov, a 0-100 scale) + markers at rollout-start and 60%
 function vaxContext(cov, yCov){
@@ -133,11 +123,11 @@ function vaxContext(cov, yCov){
      .attr("d", d3.line().x(function(p){return x(p.d);}).y(function(p){return yCov(p.v);}));
   function mark(idx, label){
     if(idx<0) return;
-    const px=x(DATES[idx]), right=px>iw*0.62;
+    const px=x(DATES[idx]);
     plot.append("line").attr("x1",px).attr("x2",px).attr("y1",0).attr("y2",ih)
-       .attr("stroke",VAX_COLOR).attr("stroke-width",1.3).attr("stroke-dasharray","4 3");
-    plot.append("text").attr("x",px+(right?-4:4)).attr("y",12).attr("text-anchor",right?"end":"start")
-       .style("font-size","10.5px").style("fill",VAX_COLOR).text(label);
+       .attr("stroke","black").attr("stroke-width",1.3).attr("stroke-dasharray","4 3");
+    plot.append("text").attr("x",px+4).attr("y",12).attr("text-anchor","start")   // both labels extend right of their line; the later 60% marker sits clear of the earlier "begins" label
+       .style("font-size","10.5px").style("fill","black").text(label);
   }
   const fmt=d3.timeFormat("%b %Y");
   const iStart=cov.findIndex(function(v){return v>0;});   // rollout begins (coverage lifts off zero)
@@ -157,134 +147,154 @@ function valueAt(data,dt,acc){
   const a=data[Math.max(0,i-1)], b=data[Math.min(data.length-1,i)];
   return acc((b && dt-a.d>b.d-dt)?b:a);
 }
-function waveLabels(y){
-  [["Alpha","2021-01-11"],["Delta","2021-08-26"],["Omicron","2022-01-24"]].forEach(function(L){
-    const dt=parse(L[1]), v=valueAt(WORLD,dt,d=>d.cases);
-    plot.append("text").attr("class","wave-label").attr("x",x(dt)).attr("y",y(v)-8).attr("text-anchor","middle").text(L[0]);
+// variant labels for scene 1, positioned on the normalized 0-100 axis at each wave's own peak
+function waveLabels(yL){
+  [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta","2021-08-26"],["Omicron","2022-01-24"],["Omicron BA.2","2022-03-16"],["Omicron BA.5","2022-07-20"]].forEach(function(L){
+    const dt=parse(L[1]), v=100*valueAt(WORLD,dt,d=>d.cases)/worldMaxCases;
+    const ly=Math.max(10, yL(v)-8);   // clamp so the 100% Omicron label stays inside the top edge
+    plot.append("text").attr("class","wave-label").attr("x",x(dt)).attr("y",ly).attr("text-anchor","middle").style("font-size","11px").text(L[0]);
   });
 }
 
 // ============ TITLE SLIDE ============
 function drawIntro(){
-  const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
+  const y=d3.scaleLinear().domain([0,worldMaxCases*1.1]).range([ih,0]);
   plot.append("path").datum(WORLD).attr("fill",CASE_COLOR).attr("fill-opacity",.12)
       .attr("d",d3.area().x(d=>x(d.d)).y0(ih).y1(d=>y(d.cases)));
   const cx=iw/2, ty=ih*0.30;
-  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","#1a1a1a").text("COVID-19: When Deaths Decoupled from Cases");
-  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("How the pandemic came in waves - and how cases and deaths came apart.");
-  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","#444").text("Untangling why - vaccines, testing, milder variants - is the hard part.");
-  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("Shows association, not causation  -  World, 2020-2022");
-  anno.append("text").attr("x",cx).attr("y",ty+100).attr("text-anchor","middle").style("font-size","12.5px").style("fill","#888").text("click Begin to start the story");
+  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","black").text("A closer look at COVID-19: cases, deaths, and vaccination");
+  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","dimgray").text("How the pandemic came in waves - and how cases and deaths came apart.");
+  anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","dimgray").text("Untangling why - vaccines, testing, milder variants - is the hard part.");
+  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","gray").text("Shows association, not causation  -  World, 2020-2022");
+  anno.append("text").attr("x",cx).attr("y",ty+100).attr("text-anchor","middle").style("font-size","12.5px").style("fill","gray").text("click Begin to start the story");
 }
 
 // ============ SCENES (the martini-glass STEM) ============
+// buildLayers(level): draw the cumulative set of lines on a shared 0-100 left axis, one more per level.
+// 1 = cases, 2 = +deaths, 3 = +% vaccinated (and the Dec-2020 marker), 4 = +deaths per 1,000 cases (right axis).
+function buildLayers(level){
+  const TOPPAD=64;   // empty headroom (px) at the top of every chart, so curves and callouts clear the caption above
+  const yL=d3.scaleLinear().domain([0,100]).range([ih,TOPPAD]);
+  drawAxes(yL);
+  if(level>=2) vaxMarker();
+  if(level>=3) sixtyMarker();
+  const legend=[];
+  plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
+      .attr("d",d3.line().x(d=>x(d.d)).y(d=>yL(100*d.cases/worldMaxCases)));
+  legend.push(["Cases (% of max)",CASE_COLOR]);
+  if(level>=2){
+    plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
+        .attr("d",d3.line().x(d=>x(d.d)).y(d=>yL(100*d.deaths/worldMaxDeaths)));
+    legend.push(["Deaths (% of max)",DEATH_COLOR]);
+  }
+  if(level>=3){
+    const cov=RAW.vax["World"]||[];   // coverage is a percentage, so it shares the left 0-100 axis
+    if(cov.length) plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};})).attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.4).attr("opacity",0.85)
+        .attr("d",d3.line().x(p=>x(p.d)).y(p=>yL(p.v)));
+    legend.push(["% vaccinated",VAX_COLOR]);
+  }
+  if(level>=4){
+    const thresh=Math.max(1,0.02*(d3.max(WORLD,d=>d.cases)||1));
+    let start=WORLD.findIndex(d=>d.cases>=thresh); if(start<0) start=0;
+    const pts=WORLD.map(function(d,i){ return {d:d.d, r:((i>=start&&d.cases>0)?1000*d.deaths/d.cases:null)}; });
+    ratioLinePath(pts, yL);
+    legend.push(["Deaths per 1,000 cases",RATIO_COLOR]);
+  }
+  const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
+  legend.forEach(function(e,i){
+    const row=lg.append("g").attr("transform","translate(0,"+(i*15)+")");
+    row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",e[1]);
+    row.append("text").attr("x",18).attr("y",3).text(e[0]);
+  });  return {yL:yL};
+}
+
 const scenes = [
  { title:"COVID arrived in waves",
-   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each driven by a new variant.",
+   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each driven by a new variant. Since cases, deaths, and vaccination have very different sizes, each will be drawn relative to its own peak (highest point = 100%) so they can be compared on one scale.",
    draw:function(){
-     const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
-     drawAxes(y,"New cases / day (7-day avg)");
-     areaLine(WORLD,y,d=>d.cases,CASE_COLOR,.30);
-     waveLabels(y);
-     annotate(x(parse("2020-08-01")),y(valueAt(WORLD,parse("2020-08-01"),d=>d.cases)),"Waves, not a steady climb",["Each hump is a separate surge,","driven by a new variant"],-150,-300);
+     const s=buildLayers(1);
+     waveLabels(s.yL);
+     annotate(x(parse("2020-11-01")),s.yL(88),"Each hump is a separate surge,",["driven by a new variant"],0,0,true);
    }},
- { title:"Vaccines begin rolling out (Dec 2020)",
-   caption:"Mass vaccination began in December 2020 - about a year into the pandemic, and before the two largest case waves.",
+ { title:"Deaths did not keep pace",
+   caption:"Now add deaths (also scaled to its own peak). The Omicron wave set case records, yet deaths stayed far below their earlier peaks - the link between cases and deaths had weakened.",
    draw:function(){
-     const y=d3.scaleLinear().domain([0,worldMaxCases]).range([ih,0]);
-     drawAxes(y,"New cases / day (7-day avg)");
-     areaLine(WORLD,y,d=>d.cases,CASE_COLOR,.30);
-     vaxMarker();
-     annotate(x(vaxDate),y(worldMaxCases*0.5),"Vaccine rollout",["First mass vaccinations,","then the biggest waves hit"],-40,-30);
+     const s=buildLayers(2);
+     const omiStart=parse("2021-12-01");
+     const dPk=WORLD.filter(d=>d.d>=omiStart).reduce((a,b)=>b.deaths>a.deaths?b:a);
+     annotate(x(dPk.d),s.yL(100*dPk.deaths/worldMaxDeaths),"Cases set a record in Jan 2022,",["~6x the Jan 2021 wave, yet","deaths were lower"],-235,10);
    }},
- { title:"Cases and deaths decoupled",
-   caption:"Scaling each curve to its own peak reveals the shift: the Omicron wave set case records, yet deaths stayed far below their earlier peaks. Vaccines, better treatment, milder Omicron, and changing testing all contributed - this shows the decoupling, not its single cause.",
+ { title:"Vaccines rolled out",
+   caption:"Add vaccination coverage (>= 1 dose): it climbed from late 2020, passing 60% by early 2022, overlapping the stretch when deaths stayed low. Better treatment and milder Omicron mattered too - this is association, not proof of a single cause.",
    draw:function(){
-     const y=d3.scaleLinear().domain([0,100]).range([ih,0]);
-     drawAxes(y,"% of that metric's own peak");
-     vaxMarker();
-     plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
-         .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.cases/worldMaxCases)));
-     plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
-         .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.deaths/worldMaxDeaths)));
-     const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
-     [["Cases",CASE_COLOR],["Deaths",DEATH_COLOR]].forEach(function(e,i){
-       const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
-       row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",e[1]);
-       row.append("text").attr("x",18).attr("y",3).text(e[0]);
-     });
-     annotate(x(omicron.d),y(100),"Omicron",["Record cases (100%),","but deaths stayed far lower"],-30,64);
+     const s=buildLayers(3);
+     const cov=RAW.vax["World"]||[], i60=cov.findIndex(function(v){return v>=60;});
+     if(i60>=0){
+       const months=(DATES[i60].getFullYear()-vaxDate.getFullYear())*12+(DATES[i60].getMonth()-vaxDate.getMonth());
+       annotate(x(DATES[i60]),s.yL(cov[i60]),months+" months after vaccines began,",["the world reached 60% coverage,","then leveled off near 70%"],-235,-35);
+     }
+   }},
+ { title:"Deaths per case collapsed",
+   caption:"Add reported deaths per 1,000 cases: it fell from roughly 90 early on to just a few by late 2022. It dropped substantially before vaccines even existed, though early ratios are overstated due to limited testing and missed mild cases. Testing, treatment, and milder variants also contributed to the decline in deaths per case, so the data shows association, not proof of cause.",
+   draw:function(){
+     const s=buildLayers(4);
+     const rAt=function(dt){return valueAt(WORLD,dt,function(d){return d.cases>0?1000*d.deaths/d.cases:0;});};
+     const rVax=Math.round(rAt(vaxDate));
+     annotate(x(vaxDate),s.yL(Math.min(RATIO_MAX,rAt(vaxDate))),"Before vaccines, deaths per",["1,000 had already dropped","from ~90 to ~"+rVax],30,-70);
+     // second circle: when the ratio finally, permanently fell back below its Dec-2020 level
+     const thr=Math.max(1,0.02*(d3.max(WORLD,d=>d.cases)||1));
+     let st=WORLD.findIndex(d=>d.cases>=thr); if(st<0) st=0;
+     const rSeries=WORLD.map(function(d,i){ return {d:d.d, r:((i>=st&&d.cases>0)?1000*d.deaths/d.cases:null)}; });
+     const rLvl=rAt(vaxDate), vi=rSeries.findIndex(p=>p.d>=vaxDate);
+     let lastGE=-1; for(var k=vi;k<rSeries.length;k++){ if(rSeries[k].r!=null && rSeries[k].r>=rLvl) lastGE=k; }
+     if(lastGE>=0 && lastGE+1<rSeries.length){
+       const cp=rSeries[lastGE+1];
+       annotate(x(cp.d),s.yL(Math.min(RATIO_MAX,cp.r)),"Not until "+d3.timeFormat("%b %Y")(cp.d)+" did deaths",["per 1,000 finally stay below","the Dec 2020 level"],-100,12);
+     }
    }}
 ];
 
-// ============ EXPLORE VIEW A: compare continents (overlay) ============
-function drawCompare(){
-  const sel=CONTINENTS;
-  const base   = params.metric==="cases" ? (d=>d.cases) : (d=>d.deaths);
-  const factorOf = c => params.scale==="percap" ? 1/(POP[c]||1) : 1;
-  const unit   = params.metric + (params.scale==="percap" ? "/day per million" : "/day");
-  const series = sel.map(c => ({name:c, data:recs(c), f:factorOf(c)}));
-  const ymax   = d3.max(series, s => d3.max(s.data, d=>base(d)*s.f)) || 1;
-  const y      = d3.scaleLinear().domain([0,ymax]).range([ih,0]);
-  drawAxes(y, "New "+unit+" (7-day avg)");
-  vaxMarker();
-  series.forEach(function(s){
-    plot.append("path").datum(s.data).attr("fill","none").attr("stroke",color(s.name)).attr("stroke-width",1.6)
-        .attr("d", d3.line().x(d=>x(d.d)).y(d=>y(base(d)*s.f)));
-  });
-  const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
-  series.forEach(function(s,i){
-    const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
-    row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",color(s.name));
-    row.append("text").attr("x",18).attr("y",3).text(s.name);
-  });
-  const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
-  const dots = series.map(s => plot.append("circle").attr("r",3.5).attr("fill",color(s.name)).attr("stroke","#fff").style("display","none"));
-  const bisect=d3.bisector(d=>d.d).left;
-  const fmt = params.scale==="percap" ? fmtDec : fmtInt;
-  plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
-    .on("mousemove", function(){
-       const d0=x.invert(d3.mouse(this)[0]);
-       var rows="", dt=null;
-       series.forEach(function(s,i){
-         const j=bisect(s.data,d0), a=s.data[Math.max(0,j-1)], b=s.data[Math.min(s.data.length-1,j)];
-         const d=(b && d0-a.d>b.d-d0)?b:a, v=base(d)*s.f; dt=d.d;
-         dots[i].attr("cx",x(d.d)).attr("cy",y(v)).style("display",null);
-         rows+="<div><span style='color:"+color(s.name)+"'>&#9632;</span> "+s.name+": <b>"+fmt(v)+"</b></div>";
-       });
-       guide.attr("x1",x(dt)).attr("x2",x(dt)).style("display",null);
-       var lx=d3.event.clientX+14; if(lx+190 > window.innerWidth) lx=d3.event.clientX-204;
-       tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+fmtDate(dt)+"</b> ("+unit+")"+rows);
-    })
-    .on("mouseout", function(){ guide.style("display","none"); dots.forEach(function(dd){dd.style("display","none");}); tip.style("display","none"); });
-}
 
+// per-region story box (draft wording - swaps with the selected region)
+const STORIES = {
+  "World":         ["Deaths per 1,000 cases fell",  ["from ~90 to ~3.5 - most of it","before vaccines even arrived"]],
+  "Africa":        ["Africa never topped ~34%",     ["vaccinated, yet its death","rate per case still fell"]],
+  "Asia":          ["Delta was Asia's deadliest wave", ["(May 2021); the big Omicron","case wave barely moved deaths"]],
+  "Europe":        ["Testing was scarce in 2020, so", ["deaths per 1,000 cases are","likely overstated"], "2020-05-01"],
+  "North America": ["Total deaths peaked in", ["early 2021; the record Omicron","wave caused fewer deaths"]],
+  "Oceania":       ["Oceania kept COVID out until", ["Omicron - ~60% vaccinated,","deaths per 1,000 always low"]],
+  "South America": ["Hit hard by Gamma in 2021,",   ["then vaccinated the most -","only region > 80% vaccinated"]]
+};
 // ============ EXPLORE VIEW B: decoupling for a chosen region (Scene-3 view) ============
 function drawDecoupling(){
-  const name=params.region, data=recs(name), cov=RAW.vax[name]||[];
+  const name=params.region, data=getRecords(name), cov=RAW.vax[name]||[];
   const maxC=d3.max(data,d=>d.cases)||1, maxD=d3.max(data,d=>d.deaths)||1;
-  const y=d3.scaleLinear().domain([0,100]).range([ih,0]);
-  drawAxes(y,"% of that metric's own peak");
+  const TOPPAD=64;
+  const y=d3.scaleLinear().domain([0,100]).range([ih,TOPPAD]);
+  drawAxes(y);
   vaxContext(cov, y);   // coverage line + 40% marker share the 0-100 axis
   plot.append("path").datum(data).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
       .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.cases/maxC)));
   plot.append("path").datum(data).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
       .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.deaths/maxD)));
+  // deaths per 1,000 reported cases, on the same left 0-100 axis (capped at 100; matches Scene 4)
+  const thresh=Math.max(1,0.02*maxC);
+  let start=data.findIndex(d=>d.cases>=thresh); if(start<0) start=0;
+  const pts=data.map(function(d,i){ return {d:d.d, r:((i>=start && d.cases>0)?1000*d.deaths/d.cases:null)}; });
+  ratioLinePath(pts, y);
   const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
-  [["Cases",CASE_COLOR],["Deaths",DEATH_COLOR],["% vaccinated",VAX_COLOR]].forEach(function(e,i){
+  [["Cases (% of max)",CASE_COLOR],["Deaths (% of max)",DEATH_COLOR],["% vaccinated",VAX_COLOR],["Deaths per 1,000 cases",RATIO_COLOR]].forEach(function(e,i){
     const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
     row.append("rect").attr("width",12).attr("height",3).attr("y",-2).attr("fill",e[1]);
     row.append("text").attr("x",18).attr("y",3).text(e[0]);
-  });
-  // annotation at the region's biggest case wave
-  const peak=data.reduce((a,b)=>b.cases>a.cases?b:a);
-  const dpk=Math.round(100*peak.deaths/maxD);
-  annotate(x(peak.d), y(100), "Biggest case wave", ["Cases at 100% of their peak -","deaths only "+dpk+"% of theirs"], -40, 72);
+  });  const story=STORIES[name];
+  if(story) annotate(x(parse(story[2]||"2021-04-01")), y(96), story[0], story[1], 0, 0, true);
   // hover
   const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
-  const dc=plot.append("circle").attr("r",4).attr("fill",CASE_COLOR).attr("stroke","#fff").style("display","none");
-  const dd=plot.append("circle").attr("r",4).attr("fill",DEATH_COLOR).attr("stroke","#fff").style("display","none");
+  const dc=plot.append("circle").attr("r",4).attr("fill","black").attr("stroke","white").style("display","none");
+  const dd=plot.append("circle").attr("r",4).attr("fill","black").attr("stroke","white").style("display","none");
+  const dr=plot.append("circle").attr("r",4).attr("fill","black").attr("stroke","white").style("display","none");
+  const dv=plot.append("circle").attr("r",4).attr("fill","black").attr("stroke","white").style("display","none");
   const bisect=d3.bisector(d=>d.d).left;
   plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
     .on("mousemove", function(){
@@ -292,71 +302,23 @@ function drawDecoupling(){
        const ia=Math.max(0,j-1), ib=Math.min(data.length-1,j), useB=(data[ib] && d0-data[ia].d>data[ib].d-d0);
        const d=useB?data[ib]:data[ia], di=useB?ib:ia;
        const cp=Math.round(100*d.cases/maxC), dp=Math.round(100*d.deaths/maxD), vc=Math.round(cov[di]||0);
+       const rr=pts[di]?pts[di].r:null;
        guide.attr("x1",x(d.d)).attr("x2",x(d.d)).style("display",null);
        dc.attr("cx",x(d.d)).attr("cy",y(100*d.cases/maxC)).style("display",null);
        dd.attr("cx",x(d.d)).attr("cy",y(100*d.deaths/maxD)).style("display",null);
+       if(rr!=null){ dr.attr("cx",x(d.d)).attr("cy",y(Math.min(RATIO_MAX,rr))).style("display",null); } else { dr.style("display","none"); }
+       if(cov[di]!=null){ dv.attr("cx",x(d.d)).attr("cy",y(cov[di])).style("display",null); } else { dv.style("display","none"); }
        var lx=d3.event.clientX+14; if(lx+210>window.innerWidth) lx=d3.event.clientX-224;
        tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
           .html("<b>"+name+" - "+fmtDate(d.d)+"</b>"
                +"<br><span style='color:"+CASE_COLOR+"'>&#9632;</span> Cases: "+cp+"% of peak ("+fmtInt(d.cases)+"/day)"
                +"<br><span style='color:"+DEATH_COLOR+"'>&#9632;</span> Deaths: "+dp+"% of peak ("+fmtInt(d.deaths)+"/day)"
+               +(rr!=null?"<br><span style='color:"+RATIO_COLOR+"'>&#9632;</span> Deaths per 1,000: "+rr.toFixed(1):"")
                +"<br><span style='color:"+VAX_COLOR+"'>&#9632;</span> Vaccinated: "+vc+"%");
     })
-    .on("mouseout", function(){ guide.style("display","none"); dc.style("display","none"); dd.style("display","none"); tip.style("display","none"); });
+    .on("mouseout", function(){ guide.style("display","none"); dc.style("display","none"); dd.style("display","none"); dr.style("display","none"); dv.style("display","none"); tip.style("display","none"); });
 }
 
-// ============ EXPLORE VIEW B (ratio): deaths per 1,000 reported cases ============
-function drawRatio(){
-  const name=params.region, data=recs(name), cov=RAW.vax[name]||[];
-  const maxCases=d3.max(data,d=>d.cases)||1, thresh=Math.max(1, 0.02*maxCases);
-  let start=data.findIndex(d=>d.cases>=thresh); if(start<0) start=0;   // first week with enough cases
-  const pts=data.map(function(d,i){ return {d:d.d, cases:d.cases, deaths:d.deaths,
-    r:((i>=start && d.cases>0) ? 1000*d.deaths/d.cases : null)}; });   // continuous after start (no interior gaps)
-  const valid=pts.filter(p=>p.r!=null);
-  const rmax=d3.max(valid,p=>p.r)||1;
-  const y=d3.scaleLinear().domain([0,rmax*1.08]).range([ih,0]);
-  drawAxes(y,"Deaths per 1,000 reported cases");
-  // right axis + line for vaccination coverage
-  const yCov=d3.scaleLinear().domain([0,100]).range([ih,0]);
-  plot.append("g").attr("transform","translate("+iw+",0)").call(d3.axisRight(yCov).ticks(5).tickFormat(function(v){return v+"%";}));
-  plot.append("text").attr("transform","rotate(-90)").attr("x",-ih/2).attr("y",iw+37).attr("text-anchor","middle").style("font-size","11px").style("fill",VAX_COLOR).text("% vaccinated");
-  vaxContext(cov, yCov);
-  plot.append("path").datum(pts).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9)
-      .attr("d", d3.line().defined(p=>p.r!=null).x(p=>x(p.d)).y(p=>y(p.r)));
-  const firstValid = valid.length ? valid[0].d : null;
-  if(firstValid && firstValid > parse("2020-09-01")){
-    plot.append("text").attr("x",(x(DATES[0])+x(firstValid))/2).attr("y",ih*0.62).attr("text-anchor","middle")
-        .style("font-size","11px").style("font-style","italic").style("fill","#aaa")
-        .text("too few cases here to compute a ratio");
-  }
-  if(valid.length){
-    let peakPt=valid[0]; valid.forEach(function(p){ if(p.r>peakPt.r) peakPt=p; });   // overall peak
-    const lastVal=valid[valid.length-1].r;
-    const pre=peakPt.d<vaxDate, px=x(peakPt.d), dx=px>iw*0.55?-205:55;
-    annotate(px, y(peakPt.r), "Deaths per case peaked here",
-      ["~"+Math.round(peakPt.r)+" per 1,000"+(pre?" (before vaccines)":""),
-       "then fell to ~"+lastVal.toFixed(1)+" by late 2022"],
-      dx, 30);
-  }
-  const guide=plot.append("line").attr("class","guide").attr("y1",0).attr("y2",ih).style("display","none");
-  const dot=plot.append("circle").attr("r",4).attr("fill",RATIO_COLOR).attr("stroke","#fff").style("display","none");
-  const bisect=d3.bisector(p=>p.d).left;
-  plot.append("rect").attr("width",iw).attr("height",ih).attr("fill","none").style("pointer-events","all")
-    .on("mousemove", function(){
-       const d0=x.invert(d3.mouse(this)[0]), j=bisect(pts,d0);
-       const ia=Math.max(0,j-1), ib=Math.min(pts.length-1,j), useB=(pts[ib] && d0-pts[ia].d>pts[ib].d-d0);
-       const p=useB?pts[ib]:pts[ia], pi=useB?ib:ia, vc=Math.round(cov[pi]||0);
-       guide.attr("x1",x(p.d)).attr("x2",x(p.d)).style("display",null);
-       if(p.r!=null){ dot.attr("cx",x(p.d)).attr("cy",y(p.r)).style("display",null); } else { dot.style("display","none"); }
-       var lx=d3.event.clientX+14; if(lx+230>window.innerWidth) lx=d3.event.clientX-244;
-       tip.style("display","block").style("left",lx+"px").style("top",(d3.event.clientY-10)+"px")
-          .html("<b>"+name+" - "+fmtDate(p.d)+"</b><br>"+(p.r!=null
-             ? "<span style='color:"+RATIO_COLOR+"'>&#9632;</span> "+p.r.toFixed(1)+" deaths per 1,000 cases<br>"
-             : "too few cases to compute a ratio<br>")
-             +"<span style='color:"+VAX_COLOR+"'>&#9632;</span> Vaccinated: "+vc+"%");
-    })
-    .on("mouseout", function(){ guide.style("display","none"); dot.style("display","none"); tip.style("display","none"); });
-}
 
 // ============ RENDER ============
 function render(){
@@ -381,26 +343,10 @@ function render(){
     d3.select("#back").property("disabled", params.scene===0);
     d3.select("#next").html(params.scene===scenes.length-1 ? "Explore the data &#9654;" : "Next &#9654;");
   } else {
-    const compare = params.view==="compare";
-    d3.select("#metric").style("display", compare?null:"none");
-    d3.select("#scale").style("display", compare?null:"none");
-    d3.select("#dmode").style("display", compare?"none":null);
-    d3.select("#region").style("display", compare?"none":"flex");
-    if(compare){
-      drawCompare();
-      d3.select("#caption").text("Comparing continents - daily new "+params.metric+(params.scale==="percap"?" per million people":"")+" (7-day average). Switch metric or scale to see how the regions re-rank; hover for values.");
-    } else if(params.dview==="ratio"){
-      drawRatio();
-      d3.select("#caption").text(params.region+" - reported deaths per 1,000 reported cases. The fatality ratio fell sharply over the pandemic as testing, treatment, and vaccines improved and milder Omicron spread. (Early ratios are overstated because limited testing missed mild cases; late-2022 ratios also rose as testing wound down and mild cases again went untested.) Pick a region above; hover for values.");
-    } else {
-      drawDecoupling();
-      d3.select("#caption").text(params.region+" - cases (blue) vs deaths (red), each scaled to its own peak: the final-scene view for any region you choose. After the vaccine line, deaths fall well below cases. (Early on, limited testing undercounted cases, so deaths look relatively high in 2020.) Pick a region above; hover for values.");
-    }
-    d3.selectAll("#view button").classed("active", function(){ return this.getAttribute("data-v")===params.view; });
-    d3.selectAll("#dmode button").classed("active", function(){ return this.getAttribute("data-d")===params.dview; });
+    d3.select("#region").style("display","flex");
+    drawDecoupling();
+    d3.select("#caption").text(params.region+" - cases and deaths (each scaled to its own peak), % vaccinated, and deaths per 1,000 reported cases (crimson, right axis) for any region you choose - the full final-scene view. Cases and deaths come apart while deaths per case falls sharply. (Early on, limited testing undercounted cases, so 2020 ratios look high.) Pick a region above; hover for values.");
     d3.selectAll("#region button").classed("active", function(){ return this.getAttribute("data-r")===params.region; });
-    d3.selectAll("#metric button").classed("active", function(){ return this.getAttribute("data-m")===params.metric; });
-    d3.selectAll("#scale button").classed("active", function(){ return this.getAttribute("data-s")===params.scale; });
   }
 }
 
@@ -415,10 +361,6 @@ d3.select("#back").on("click", function(){ if(params.scene>0){ params.scene--; r
 d3.select("#replay").on("click", function(){ params.mode="stem"; params.scene=scenes.length-1; render(); });
 d3.select("#region").selectAll("button").data(REGIONS).enter().append("button")
   .attr("data-r",d=>d).text(d=>d).on("click", function(d){ params.region=d; render(); });
-d3.selectAll("#view button").on("click", function(){ params.view=this.getAttribute("data-v"); render(); });
-d3.selectAll("#dmode button").on("click", function(){ params.dview=this.getAttribute("data-d"); render(); });
-d3.selectAll("#metric button").on("click", function(){ params.metric=this.getAttribute("data-m"); render(); });
-d3.selectAll("#scale button").on("click", function(){ params.scale=this.getAttribute("data-s"); render(); });
 
 render();
 </script>
