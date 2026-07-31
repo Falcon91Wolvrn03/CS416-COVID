@@ -148,10 +148,22 @@ function valueAt(data,dt,acc){
   return acc((b && dt-a.d>b.d-dt)?b:a);
 }
 // variant labels for scene 1, positioned on the normalized 0-100 axis at each wave's own peak
-function waveLabels(yL){
-  [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta","2021-08-26"],["Omicron","2022-01-24"],["Omicron BA.2","2022-03-16"],["Omicron BA.5","2022-07-20"]].forEach(function(L){
-    const dt=parse(L[1]), v=100*valueAt(WORLD,dt,d=>d.cases)/worldMaxCases;
-    const ly=Math.max(10, yL(v)-8);   // clamp so the 100% Omicron label stays inside the top edge
+// per-region variant wave labels (drawn at each wave's own case peak)
+const WAVE_LABELS = {
+  "World":         [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta","2021-08-26"],["Omicron","2022-01-24"],["BA.2","2022-03-16"],["BA.5","2022-07-20"]],
+  "Africa":        [["Original","2020-07-15"],["Beta","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-01-15"]],
+  "Asia":          [["Delta (India)","2021-05-15"],["Delta","2021-08-15"],["Omicron","2022-01-26"],["BA.2","2022-03-15"],["BA.5","2022-08-15"]],
+  "Europe":        [["Original","2020-04-15"],["Original","2020-11-15"],["Alpha","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-02-15"],["BA.2","2022-03-23"],["BA.5","2022-07-15"]],
+  "North America": [["Original","2020-04-15"],["Original","2020-07-15"],["Original","2021-01-15"],["Alpha","2021-04-15"],["Delta","2021-09-15"],["Omicron","2022-01-15"],["BA.2","2022-05-25"],["BA.5","2022-07-15"]],
+  "Oceania":       [["Omicron","2022-01-15"],["BA.2","2022-03-15"],["BA.5","2022-07-15"]],
+  "South America": [["Original","2020-08-15"],["Gamma","2021-01-15"],["Gamma","2021-06-15"],["Omicron","2022-01-15"],["BA.5","2022-07-15"]]
+};
+function waveLabels(yL, name){
+  name = name || "World";
+  const data=getRecords(name), mx=d3.max(data,d=>d.cases)||1;
+  (WAVE_LABELS[name]||[]).forEach(function(L){
+    const dt=parse(L[1]), v=100*valueAt(data,dt,d=>d.cases)/mx;
+    const ly=Math.max(10, yL(v)-8);   // clamp so a 100% label stays inside the top edge
     plot.append("text").attr("class","wave-label").attr("x",x(dt)).attr("y",ly).attr("text-anchor","middle").style("font-size","9.5px").style("fill","gray").text(L[0]);
   });
 }
@@ -261,8 +273,8 @@ const scenes = [
 // per-region story box (draft wording - swaps with the selected region)
 const STORIES = {
   "World":         ["Deaths per 1,000 cases fell",  ["from ~90 to ~3.5 - most of it","before vaccines even arrived"]],
-  "Africa":        ["Africa never topped ~34%",     ["vaccinated, yet its death","rate per case still fell"]],
-  "Asia":          ["Delta was Asia's deadliest wave", ["(May 2021); the big Omicron","case wave barely moved deaths"]],
+  "Africa":        ["Africa never topped ~34%",     ["vaccinated, yet its death","rate per case still fell"], "2020-04-01"],
+  "Asia":          ["Delta was Asia's deadliest wave", ["(May 2021); the big Omicron","case wave barely moved deaths"], "2021-03-01"],
   "Europe":        ["Testing was scarce in 2020, so", ["deaths per 1,000 cases are","likely overstated"], "2020-05-01"],
   "North America": ["Total deaths peaked in", ["early 2021; the record Omicron","wave caused fewer deaths"]],
   "Oceania":       ["Oceania kept COVID out until", ["Omicron - ~60% vaccinated,","deaths per 1,000 always low"]],
@@ -285,6 +297,7 @@ function drawDecoupling(){
   let start=data.findIndex(d=>d.cases>=thresh); if(start<0) start=0;
   const pts=data.map(function(d,i){ return {d:d.d, r:((i>=start && d.cases>0)?1000*d.deaths/d.cases:null)}; });
   ratioLinePath(pts, y);
+  waveLabels(y, name);   // that region's own variant wave labels
   const lg=plot.append("g").attr("class","legend").attr("transform","translate(12,4)");
   [["Cases (% of max)",CASE_COLOR],["Deaths (% of max)",DEATH_COLOR],["% vaccinated",VAX_COLOR],["Deaths per 1,000 cases",RATIO_COLOR]].forEach(function(e,i){
     const row=lg.append("g").attr("transform",`translate(0,${i*15})`);
