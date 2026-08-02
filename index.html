@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <style>
-  .anno-box{fill:white;stroke:black;}
+  .anno-box{fill:white;fill-opacity:0.67;stroke:black;}
   .vax-line{stroke:darkgray;stroke-dasharray:4 3;}
   .tip{position:fixed;pointer-events:none;background:white;display:none;}
   button.active{font-weight:bold;background:dimgray;color:white;}
@@ -30,7 +30,7 @@
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="456"></svg>
   <div class="tip" id="tip"></div>
-  <div class="foot">This shows <b>association, not causation</b>. &middot; Data: <a href="https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series" target="_blank" rel="noopener">Johns Hopkins University CSSE</a> (time_series_covid19_confirmed_global.csv and time_series_covid19_deaths_global.csv), daily new cases/deaths, 7-day average, sampled weekly; vaccination coverage, share with &ge;1 dose, from <a href="https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations" target="_blank" rel="noopener">Our World in Data</a> (vaccinations.csv).</div>
+  <div class="foot">The full story shows <b>association, not causation</b>. &middot; Data: <a href="https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series" target="_blank" rel="noopener">Johns Hopkins University CSSE</a> (time_series_covid19_confirmed_global.csv and time_series_covid19_deaths_global.csv), daily new cases/deaths, 7-day average, sampled weekly; vaccination coverage, share with &ge;1 dose, from <a href="https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations" target="_blank" rel="noopener">Our World in Data</a> (vaccinations.csv).</div>
 </div>
 
 <script>
@@ -47,14 +47,14 @@ const WORLD = getRecords("World");
 const worldMaxCases  = d3.max(WORLD, d=>d.cases);
 const worldMaxDeaths = d3.max(WORLD, d=>d.deaths);
 const vaxDate  = parse("2020-12-14");
-const CASE_COLOR="cornflowerblue", DEATH_COLOR="chocolate";  // colorblind-distinguishable CSS colors: blue (cases) / orange (deaths)
+const CASE_COLOR="cornflowerblue", DEATH_COLOR="black";  // blue (cases) / black (deaths - thematically apt, distinct from blue/red)
 
 // ============ PARAMETERS ============  (the complete visualization state)
 var params = { scene: 0, mode: "intro", region: "World" };
 const REGIONS = ["World"].concat(CONTINENTS);
 const RATIO_MAX = 100;  // deaths-per-1,000 shares the left 0-100 axis; values above 100 (Europe's early spike) clamp to the top
 const RATIO_COLOR = "crimson";  // red - the deaths-per-1,000 ratio line
-const VAX_COLOR = "gold";       // yellow - vaccination coverage, kept distinct from the blue cases line
+const VAX_COLOR = "green";      // green - vaccination coverage (health/positive); note: red-green clash with the crimson ratio line for colorblind viewers
 
 // ============ LAYOUT & SCALES ============
 const W=900, H=456, margin={t:16,r:46,b:40,l:66};
@@ -95,9 +95,9 @@ function ratioLinePath(pts, ys){
       aug.push({d:new Date(p.d.getTime()+f*(q.d.getTime()-p.d.getTime())), r:CAP});
     }
   }
-  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9)
+  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",2.2)
       .attr("d",d3.line().defined(p=>p.r!=null && p.r<=CAP).x(p=>x(p.d)).y(p=>ys(p.r)));
-  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",1.9).attr("stroke-dasharray","2 2")
+  plot.append("path").datum(aug).attr("fill","none").attr("stroke",RATIO_COLOR).attr("stroke-width",2.2).attr("stroke-dasharray","2 2")
       .attr("d",d3.line().defined(p=>p.r!=null && p.r>=CAP).x(p=>x(p.d)).y(p=>ys(CAP)));
 }
 function vaxMarker(){
@@ -116,7 +116,7 @@ function sixtyMarker(){
 function vaxContext(cov, yCov){
   if(!cov || !cov.length) return null;
   plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};}))
-     .attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.4).attr("opacity",0.85)
+     .attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.7).attr("opacity",0.85)
      .attr("d", d3.line().x(function(p){return x(p.d);}).y(function(p){return yCov(p.v);}));
   function mark(idx, label){
     if(idx<0) return;
@@ -140,9 +140,9 @@ function valueAt(data,dt,acc){
 }
 // per-region variant wave labels (drawn at each wave's own case peak)
 const WAVE_LABELS = {
-  "World":         [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta","2021-08-26"],["Omicron","2022-01-24"],["BA.2","2022-03-16"],["BA.5","2022-07-20"]],
+  "World":         [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta (elsewhere)","2021-08-26"],["Omicron","2022-01-24"],["BA.2","2022-03-16"],["BA.5","2022-07-20"]],
   "Africa":        [["Original","2020-07-15"],["Beta","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-01-15"]],
-  "Asia":          [["Delta (India)","2021-05-15"],["Delta","2021-08-15"],["Omicron","2022-01-26"],["BA.2","2022-03-15"],["BA.5","2022-08-15"]],
+  "Asia":          [["Delta (India)","2021-05-15"],["Delta (elsewhere)","2021-08-15"],["Omicron","2022-01-26"],["BA.2","2022-03-15"],["BA.5","2022-08-15"]],
   "Europe":        [["Original","2020-04-15"],["Original","2020-11-15"],["Alpha","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-02-15"],["BA.2","2022-03-23"],["BA.5","2022-07-15"]],
   "North America": [["Original","2020-04-15"],["Original","2020-07-15"],["Original","2021-01-15"],["Alpha","2021-04-15"],["Delta","2021-09-15"],["Omicron","2022-01-15"],["BA.2","2022-05-25"],["BA.5","2022-07-15"]],
   "Oceania":       [["Omicron","2022-01-15"],["BA.2","2022-03-15"],["BA.5","2022-07-15"]],
@@ -178,17 +178,17 @@ function buildLayers(level){
   if(level>=2) vaxMarker();
   if(level>=3) sixtyMarker();
   const legend=[];
-  plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
+  plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",2.0)
       .attr("d",d3.line().x(d=>x(d.d)).y(d=>yL(100*d.cases/worldMaxCases)));
   legend.push(["Cases (% of max)",CASE_COLOR]);
   if(level>=2){
-    plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
+    plot.append("path").datum(WORLD).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",2.0)
         .attr("d",d3.line().x(d=>x(d.d)).y(d=>yL(100*d.deaths/worldMaxDeaths)));
     legend.push(["Deaths (% of max)",DEATH_COLOR]);
   }
   if(level>=3){
     const cov=RAW.vax["World"]||[];   // coverage is a percentage, so it shares the left 0-100 axis
-    if(cov.length) plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};})).attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.4).attr("opacity",0.85)
+    if(cov.length) plot.append("path").datum(cov.map(function(v,i){return {d:DATES[i], v:v};})).attr("fill","none").attr("stroke",VAX_COLOR).attr("stroke-width",1.7).attr("opacity",0.85)
         .attr("d",d3.line().x(p=>x(p.d)).y(p=>yL(p.v)));
     legend.push(["% vaccinated",VAX_COLOR]);
   }
@@ -209,14 +209,14 @@ function buildLayers(level){
 
 const scenes = [
  { title:"COVID arrived in waves",
-   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each driven by a new variant. Since cases, deaths, and vaccination have very different sizes, each will be drawn relative to its own peak (highest point = 100%) so they can be compared on one scale.",
+   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each brought on by a new variant. Later scenes will add deaths and vaccination; because the three have very different magnitudes, each is drawn relative to its own peak (highest point = 100%) so they can be compared on one scale.",
    draw:function(){
      const s=buildLayers(1);
      waveLabels(s.yL);
-     annotate(x(parse("2020-11-01")),s.yL(88),"Each hump is a separate surge,",["driven by a new variant"],0,0,true);
+     annotate(x(parse("2020-11-01")),s.yL(88),"Each hump is a separate surge,",["from a new variant"],0,0,true);
    }},
- { title:"Deaths did not keep pace",
-   caption:"Now add deaths (also scaled to its own peak). The Omicron wave set case records, yet deaths stayed far below their earlier peaks - the link between cases and deaths had weakened.",
+ { title:"Deaths did not track with cases",
+   caption:"Add deaths (also scaled to its own peak). The Omicron wave set case records, yet deaths stayed far below their earlier peaks - the link between cases and deaths had weakened.",
    draw:function(){
      const s=buildLayers(2);
      waveLabels(s.yL);
@@ -225,7 +225,7 @@ const scenes = [
      annotate(x(dPk.d),s.yL(100*dPk.deaths/worldMaxDeaths),"Cases set a record in Jan 2022,",["~4.5x the Jan 2021 wave, yet","deaths were lower"],-235,10);
    }},
  { title:"Vaccines rolled out",
-   caption:"Add vaccination coverage (>= 1 dose): it climbed from late 2020, passing 60% by early 2022, overlapping the stretch when deaths stayed low. Better treatment and milder Omicron mattered too - this is association, not proof of a single cause.",
+   caption:"Add vaccination coverage: it climbed from late 2020, passing 60% by early 2022, overlapping the stretch when deaths stayed low. Better treatment and milder Omicron helped hold deaths down too - this is association, not proof of a single cause.",
    draw:function(){
      const s=buildLayers(3);
      waveLabels(s.yL);
@@ -236,7 +236,7 @@ const scenes = [
      }
    }},
  { title:"Deaths per case collapsed",
-   caption:"Add reported deaths per 1,000 cases: it fell from roughly 90 early on to just a few by late 2022. It dropped substantially before vaccines even existed, though early ratios are overstated due to limited testing and missed mild cases. Testing, treatment, and milder variants also contributed to the decline in deaths per case, so the data shows association, not proof of cause.",
+   caption:"Add reported deaths per 1,000 cases: it fell from roughly 90 early on to about 3.5 by late 2022. It dropped substantially before vaccines even existed, though early ratios are overstated due to limited testing and missed mild cases. More testing, better treatment, and milder variants also contributed to the decline in deaths per case, so the data shows association, not proof of cause.",
    draw:function(){
      const s=buildLayers(4);
      waveLabels(s.yL);
@@ -263,7 +263,7 @@ const STORIES = {
   "Africa":        ["Africa never topped ~34%",     ["vaccinated, yet its death","rate per case still fell"], "2020-04-01"],
   "Asia":          ["Deaths per 1,000 didn't fall", ["as vaccination rose 5% to 58%;","it dropped only when milder","Omicron hit"], "2021-03-01"],
   "Europe":        ["Scarce 2020 testing overstates", ["the early ratio; even so it","fell ~150 to ~20 before","vaccines, held ~15 at 58%,","then dropped with Omicron"], "2020-05-01"],
-  "North America": ["Deaths per 1,000 fell from ~77", ["to ~13 before vaccines, then","rose to ~21 at 60% vaccinated","- fell for good with Omicron"]],
+  "North America": ["Deaths per 1,000 fell from ~77", ["to ~13 before vaccines, then","rose to ~21 at 60% vaccinated","- dropped with Omicron"]],
   "Oceania":       ["Oceania never met the original", ["strain or Delta at scale - it","faced only milder Omicron,","late, at ~60% vaccinated"]],
   "South America": ["Deaths per 1,000 fell early,", ["then stayed high through the","vaccine rollout - falling only","at the weaker Omicron"]]
 };
@@ -275,9 +275,9 @@ function drawDecoupling(){
   const y=d3.scaleLinear().domain([0,100]).range([ih,TOPPAD]);
   drawAxes(y);
   vaxContext(cov, y);   // coverage line + rollout-start & 60% markers, on the 0-100 axis
-  plot.append("path").datum(data).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",1.7)
+  plot.append("path").datum(data).attr("fill","none").attr("stroke",CASE_COLOR).attr("stroke-width",2.0)
       .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.cases/maxC)));
-  plot.append("path").datum(data).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",1.7)
+  plot.append("path").datum(data).attr("fill","none").attr("stroke",DEATH_COLOR).attr("stroke-width",2.0)
       .attr("d",d3.line().x(d=>x(d.d)).y(d=>y(100*d.deaths/maxD)));
   // deaths per 1,000 reported cases, on the same left 0-100 axis (capped at 100; matches Scene 4)
   const thresh=Math.max(1,0.02*maxC);
@@ -342,9 +342,9 @@ function render(){
     scenes[params.scene].draw();
     d3.select("#title").text(scenes[params.scene].title);
     d3.select("#caption").text(scenes[params.scene].caption);
-    d3.select("#count").text("Scene "+(params.scene+1)+" of "+scenes.length);
+    d3.select("#count").text("Scene "+(params.scene+1)+" of "+scenes.length+":");
     d3.select("#back").property("disabled", params.scene===0);
-    d3.select("#next").html(params.scene===scenes.length-1 ? "Explore the data &#9654;" : "Next &#9654;");
+    d3.select("#next").html(params.scene===scenes.length-1 ? "Explore by region &#9654;" : "Next &#9654;");
   } else {
     d3.select("#region").style("display","flex");
     drawDecoupling();
