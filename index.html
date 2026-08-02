@@ -12,8 +12,8 @@
   .foot a{color:inherit;text-decoration:underline;}
 </style>
 <div class="wrap">
-  <h1>A closer look at COVID-19: cases, deaths, and vaccination</h1>
-  <div class="sub">A narrative visualization of worldwide COVID-19, 2020&ndash;2022 &middot; CS&nbsp;416</div>
+  <h1>A closer look at COVID-19: cases, deaths, and vaccination coverage</h1>
+  <div class="sub">An interactive narrative visualization of the global COVID-19 pandemic (2020&ndash;2022)</div>
 
   <div class="controls" id="stem-nav">
     <button id="back">&#9664; Back</button>
@@ -30,7 +30,7 @@
   <div class="caption" id="caption"></div>
   <svg id="chart" width="900" height="456"></svg>
   <div class="tip" id="tip"></div>
-  <div class="foot">The full story shows <b>association, not causation</b>. &middot; Data: <a href="https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series" target="_blank" rel="noopener">Johns Hopkins University CSSE</a> (time_series_covid19_confirmed_global.csv and time_series_covid19_deaths_global.csv), daily new cases/deaths, 7-day average, sampled weekly; vaccination coverage, share with &ge;1 dose, from <a href="https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations" target="_blank" rel="noopener">Our World in Data</a> (vaccinations.csv).</div>
+  <div class="foot">The full story shows <b>temporal associations in the reported data, not causal attribution</b>. &middot; Data: <a href="https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series" target="_blank" rel="noopener">Johns Hopkins University CSSE</a> (time_series_covid19_confirmed_global.csv and time_series_covid19_deaths_global.csv), daily new cases/deaths, 7-day average, sampled weekly; vaccination coverage, share with &ge;1 dose, from <a href="https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations" target="_blank" rel="noopener">Our World in Data</a> (vaccinations.csv).</div>
 </div>
 
 <script>
@@ -102,7 +102,7 @@ function ratioLinePath(pts, ys){
 }
 function vaxMarker(){
   plot.append("line").attr("class","vax-line").attr("x1",x(vaxDate)).attr("x2",x(vaxDate)).attr("y1",0).attr("y2",ih);
-  plot.append("text").attr("class","vax-label").attr("x",x(vaxDate)+4).attr("y",12).style("font-size","11px").text("Vaccines, Dec 2020");
+  plot.append("text").attr("class","vax-label").attr("x",x(vaxDate)+4).attr("y",12).style("font-size","11px").text("Vaccination begins (Dec 2020)");
 }
 // vertical marker at the week World coverage first reaches 60% (darkgray dashed, matches the Dec-2020 vaccines marker)
 function sixtyMarker(){
@@ -140,13 +140,13 @@ function valueAt(data,dt,acc){
 }
 // per-region variant wave labels (drawn at each wave's own case peak)
 const WAVE_LABELS = {
-  "World":         [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta (elsewhere)","2021-08-26"],["Omicron","2022-01-24"],["BA.2","2022-03-16"],["BA.5","2022-07-20"]],
+  "World":         [["Original strain","2020-04-15"],["Alpha","2021-01-11"],["Delta (India)","2021-04-28"],["Delta (elsewhere)","2021-08-26"],["Omicron","2022-01-24"],["Omicron BA.2","2022-03-16"],["Omicron BA.5","2022-07-20"]],
   "Africa":        [["Original","2020-07-15"],["Beta","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-01-15"]],
-  "Asia":          [["Delta (India)","2021-05-15"],["Delta (elsewhere)","2021-08-15"],["Omicron","2022-01-26"],["BA.2","2022-03-15"],["BA.5","2022-08-15"]],
-  "Europe":        [["Original","2020-04-15"],["Original","2020-11-15"],["Alpha","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-02-15"],["BA.2","2022-03-23"],["BA.5","2022-07-15"]],
-  "North America": [["Original","2020-04-15"],["Original","2020-07-15"],["Original","2021-01-15"],["Alpha","2021-04-15"],["Delta","2021-09-15"],["Omicron","2022-01-15"],["BA.2","2022-05-25"],["BA.5","2022-07-15"]],
-  "Oceania":       [["Omicron","2022-01-15"],["BA.2","2022-03-15"],["BA.5","2022-07-15"]],
-  "South America": [["Original","2020-08-15"],["Gamma","2021-01-15"],["Gamma","2021-06-15"],["Omicron","2022-01-15"],["BA.5","2022-07-15"]]
+  "Asia":          [["Delta (India)","2021-05-15"],["Delta (elsewhere)","2021-08-15"],["Omicron","2022-01-26"],["Omicron BA.2","2022-03-15"],["Omicron BA.5","2022-08-15"]],
+  "Europe":        [["Original","2020-04-15"],["Original","2020-11-15"],["Alpha","2021-01-15"],["Delta","2021-07-15"],["Omicron","2022-02-15"],["Omicron BA.2","2022-03-23"],["Omicron BA.5","2022-07-15"]],
+  "North America": [["Original","2020-04-15"],["Original","2020-07-15"],["Original","2021-01-15"],["Alpha","2021-04-15"],["Delta","2021-09-15"],["Omicron","2022-01-15"],["Omicron BA.2","2022-05-25"],["Omicron BA.5","2022-07-15"]],
+  "Oceania":       [["Omicron","2022-01-15"],["Omicron BA.2","2022-03-15"],["Omicron BA.5","2022-07-15"]],
+  "South America": [["Original","2020-08-15"],["Gamma","2021-01-15"],["Gamma","2021-06-15"],["Omicron","2022-01-15"],["Omicron BA.5","2022-07-15"]]
 };
 function waveLabels(yL, name){
   name = name || "World";
@@ -161,10 +161,10 @@ function waveLabels(yL, name){
 // ============ TITLE SLIDE ============
 function drawIntro(){
   const cx=iw/2, ty=ih*0.30;
-  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","black").text("A closer look at COVID-19: cases, deaths, and vaccination");
-  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","dimgray").text("How the pandemic came in waves - and how cases and deaths came apart.");
+  anno.append("text").attr("x",cx).attr("y",ty).attr("text-anchor","middle").style("font-size","26px").style("font-weight","700").style("fill","black").text("A closer look at COVID-19: cases, deaths, and vaccination coverage");
+  anno.append("text").attr("x",cx).attr("y",ty+30).attr("text-anchor","middle").style("font-size","15px").style("fill","dimgray").text("How the pandemic came in waves - and how cases and deaths decoupled.");
   anno.append("text").attr("x",cx).attr("y",ty+50).attr("text-anchor","middle").style("font-size","15px").style("fill","dimgray").text("Untangling why - vaccines, testing, milder variants - is the hard part.");
-  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","gray").text("Shows association, not causation  -  World, 2020-2022");
+  anno.append("text").attr("x",cx).attr("y",ty+82).attr("text-anchor","middle").style("font-size","12.5px").style("fill","gray").text("Shows temporal association, not causal attribution  -  World, 2020-2022");
   anno.append("text").attr("x",cx).attr("y",ty+100).attr("text-anchor","middle").style("font-size","12.5px").style("fill","gray").text("click Begin to start the story");
 }
 
@@ -208,15 +208,15 @@ function buildLayers(level){
 }
 
 const scenes = [
- { title:"COVID arrived in waves",
-   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each brought on by a new variant. Later scenes will add deaths and vaccination; because the three have very different magnitudes, each is drawn relative to its own peak (highest point = 100%) so they can be compared on one scale.",
+ { title:"COVID-19 arrived in waves",
+   caption:"Worldwide reported cases did not climb steadily - they came in a series of distinct global waves, each brought on by a new variant. Later scenes will add deaths and vaccination. Because the three have very different magnitudes, each is drawn relative to its own peak (highest point = 100%) so they can be compared on a single axis.",
    draw:function(){
      const s=buildLayers(1);
      waveLabels(s.yL);
      annotate(x(parse("2020-11-01")),s.yL(88),"Each hump is a separate surge,",["from a new variant"],0,0,true);
    }},
  { title:"Deaths did not track with cases",
-   caption:"Add deaths (also scaled to its own peak). The Omicron wave set case records, yet deaths stayed far below their earlier peaks - the link between cases and deaths had weakened.",
+   caption:"Add deaths (also scaled to their own peak). The Omicron wave produced record case numbers, yet peak deaths stayed substantially lower than earlier waves - a clearly weakened link between cases and deaths.",
    draw:function(){
      const s=buildLayers(2);
      waveLabels(s.yL);
@@ -225,7 +225,7 @@ const scenes = [
      annotate(x(dPk.d),s.yL(100*dPk.deaths/worldMaxDeaths),"Cases set a record in Jan 2022,",["~4.5x the Jan 2021 wave, yet","deaths were lower"],-235,10);
    }},
  { title:"Vaccines rolled out",
-   caption:"Add vaccination coverage: it climbed from late 2020, passing 60% by early 2022, overlapping the stretch when deaths stayed low. Better treatment and milder Omicron helped hold deaths down too - this is association, not proof of a single cause.",
+   caption:"Add vaccination coverage: it rose from late 2020 and exceeded 60% by early 2022, overlapping the period when deaths stayed low. Improved clinical care and the milder Omicron variant also contributed; the visualization shows temporal association, not causal attribution.",
    draw:function(){
      const s=buildLayers(3);
      waveLabels(s.yL);
@@ -235,8 +235,8 @@ const scenes = [
        annotate(x(DATES[i60]),s.yL(cov[i60]),months+" months after vaccines began,",["the world reached 60% coverage,","then leveled off near 70%"],-235,-35);
      }
    }},
- { title:"Deaths per case collapsed",
-   caption:"Add reported deaths per 1,000 cases: it fell from roughly 90 early on to about 3.5 by late 2022. It dropped substantially before vaccines even existed, though early ratios are overstated due to limited testing and missed mild cases. More testing, better treatment, and milder variants also contributed to the decline in deaths per case, so the data shows association, not proof of cause.",
+ { title:"Deaths per 1,000 collapsed",
+   caption:"Add reported deaths per 1,000 cases: it fell from roughly 90 early on to about 3.5 by late 2022. It dropped substantially before vaccines even existed, though early ratios are overstated due to limited testing and missed mild cases. More testing, improved clinical care, and milder variants also contributed to the decline in deaths per 1,000, so the data shows temporal association, not causal attribution.",
    draw:function(){
      const s=buildLayers(4);
      waveLabels(s.yL);
@@ -259,13 +259,13 @@ const scenes = [
 
 // per-region story box (swaps with the selected region)
 const STORIES = {
-  "World":         ["Deaths per 1,000 cases fell",  ["from ~90 to ~3.5 - most of it","before vaccines even arrived"]],
-  "Africa":        ["Africa never topped ~34%",     ["vaccinated, yet its death","rate per case still fell"], "2020-04-01"],
-  "Asia":          ["Deaths per 1,000 didn't fall", ["as vaccination rose 5% to 58%;","it dropped only when milder","Omicron hit"], "2021-03-01"],
-  "Europe":        ["Scarce 2020 testing overstates", ["the early ratio; even so it","fell ~150 to ~20 before","vaccines, held ~15 at 58%,","then dropped with Omicron"], "2020-05-01"],
-  "North America": ["Deaths per 1,000 fell from ~77", ["to ~13 before vaccines, then","rose to ~21 at 60% vaccinated","- dropped with Omicron"]],
-  "Oceania":       ["Oceania never met the original", ["strain or Delta at scale - it","faced only milder Omicron,","late, at ~60% vaccinated"]],
-  "South America": ["Deaths per 1,000 fell early,", ["then stayed high through the","vaccine rollout - falling only","at the weaker Omicron"]]
+  "World":         ["Reported deaths per 1,000 cases", ["declined from approximately 90","to 3.5; the majority of the","decline occurred before","widespread vaccination."]],
+  "Africa":        ["Vaccination coverage never", ["exceeded approximately 34%,","yet the deaths-per-1,000","ratio still declined."], "2020-04-01"],
+  "Asia":          ["The deaths-per-1,000 ratio", ["remained relatively stable as","vaccination rose from 5% to","58% and declined sharply only","after the arrival of Omicron."], "2021-03-01"],
+  "Europe":        ["Limited early testing inflates", ["the 2020 ratio. Even so, the","ratio fell substantially","before vaccination and declined","further with Omicron."], "2020-05-01"],
+  "North America": ["The deaths-per-1,000 ratio fell", ["from about 77 to 13 before","vaccination, rose to 21 at 60%","coverage, and declined only","with Omicron."]],
+  "Oceania":       ["Oceania met the virus at scale", ["only with milder Omicron, by","then about 60% vaccinated; its","deaths-per-1,000 ratio stayed","low throughout."]],
+  "South America": ["The deaths-per-1,000 ratio", ["declined early, then remained","elevated throughout the","vaccination rollout, falling","only with milder Omicron."]]
 };
 // ============ EXPLORE: decoupling for a chosen region (the full final-scene view) ============
 function drawDecoupling(){
@@ -343,12 +343,12 @@ function render(){
     d3.select("#title").text(scenes[params.scene].title);
     d3.select("#caption").text(scenes[params.scene].caption);
     d3.select("#count").text("Scene "+(params.scene+1)+" of "+scenes.length+":");
-    d3.select("#back").property("disabled", params.scene===0);
+    d3.select("#back").property("disabled", false);
     d3.select("#next").html(params.scene===scenes.length-1 ? "Explore by region &#9654;" : "Next &#9654;");
   } else {
     d3.select("#region").style("display","flex");
     drawDecoupling();
-    d3.select("#caption").text(params.region+" - cases and deaths (each scaled to its own peak), % vaccinated, and deaths per 1,000 reported cases (crimson, same 0-100 axis, capped at 100) for any region you choose - the full final-scene view. Cases and deaths come apart while deaths per case falls sharply. (Early on, limited testing undercounted cases, so 2020 ratios look high.) Pick a region above; hover for values.");
+    d3.select("#caption").text(params.region+" - cases and deaths (each scaled to its own peak), % vaccinated, and deaths per 1,000 reported cases for any region you choose - the full final-scene view. Cases and deaths decouple while deaths per 1,000 falls sharply. (Early on, limited testing undercounted cases, so 2020 ratios look high.) Pick a region above; hover for values.");
     d3.selectAll("#region button").classed("active", function(){ return this.getAttribute("data-r")===params.region; });
   }
 }
@@ -360,7 +360,7 @@ d3.select("#next").on("click", function(){
   else { params.mode="explore"; }
   render();
 });
-d3.select("#back").on("click", function(){ if(params.scene>0){ params.scene--; render(); } });
+d3.select("#back").on("click", function(){ if(params.scene>0){ params.scene--; } else { params.mode="intro"; } render(); });
 d3.select("#replay").on("click", function(){ params.mode="stem"; params.scene=scenes.length-1; render(); });
 d3.select("#region").selectAll("button").data(REGIONS).enter().append("button")
   .attr("data-r",d=>d).text(d=>d).on("click", function(d){ params.region=d; render(); });
