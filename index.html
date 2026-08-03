@@ -222,7 +222,7 @@ const scenes = [
      waveLabels(s.yL);
      const omiStart=parse("2021-12-01");
      const dPk=WORLD.filter(d=>d.d>=omiStart).reduce((a,b)=>b.deaths>a.deaths?b:a);
-     annotate(x(dPk.d),s.yL(100*dPk.deaths/worldMaxDeaths),"Cases set a record in Jan 2022,",["~4.5x the Jan 2021 wave, yet","deaths were lower"],-235,10);
+     annotate(x(dPk.d),s.yL(100*dPk.deaths/worldMaxDeaths),"Cases set a record in Jan 2022,",["~4.5x the Jan 2021 wave, yet","deaths were lower"],1,-80);
    }},
  { title:"Vaccines rolled out",
    caption:"Add vaccination coverage: it rose from late 2020 and exceeded 60% by early 2022, overlapping the period when deaths stayed low. Improved clinical care and the milder Omicron variant also contributed; the visualization shows temporal association, not causal attribution.",
@@ -232,7 +232,7 @@ const scenes = [
      const cov=RAW.vax["World"]||[], i60=cov.findIndex(function(v){return v>=60;});
      if(i60>=0){
        const months=(DATES[i60].getFullYear()-vaxDate.getFullYear())*12+(DATES[i60].getMonth()-vaxDate.getMonth());
-       annotate(x(DATES[i60]),s.yL(cov[i60]),months+" months after vaccines began,",["the world reached 60% coverage,","then leveled off near 70%"],-235,-35);
+       annotate(x(DATES[i60]),s.yL(cov[i60]),months+" months after vaccines began,",["the world reached 60% coverage,","then leveled off near 70%"],11,-90);
      }
    }},
  { title:"Deaths per 1,000 collapsed",
@@ -242,7 +242,7 @@ const scenes = [
      waveLabels(s.yL);
      const rAt=function(dt){return valueAt(WORLD,dt,function(d){return d.cases>0?1000*d.deaths/d.cases:0;});};
      const rVax=Math.round(rAt(vaxDate));
-     annotate(x(vaxDate),s.yL(Math.min(RATIO_MAX,rAt(vaxDate))),"Before vaccines, deaths per",["1,000 had already dropped","from ~90 to ~"+rVax],30,-108);
+     annotate(x(vaxDate),s.yL(Math.min(RATIO_MAX,rAt(vaxDate))),"Before vaccines, deaths per",["1,000 had already dropped","from ~90 to ~"+rVax],-36,-108);
      // second circle: when the ratio finally, permanently fell back below its Dec-2020 level
      const thr=Math.max(1,0.02*(d3.max(WORLD,d=>d.cases)||1));
      let st=WORLD.findIndex(d=>d.cases>=thr); if(st<0) st=0;
@@ -251,7 +251,7 @@ const scenes = [
      let lastGE=-1; for(var k=vi;k<rSeries.length;k++){ if(rSeries[k].r!=null && rSeries[k].r>=rLvl) lastGE=k; }
      if(lastGE>=0 && lastGE+1<rSeries.length){
        const cp=rSeries[lastGE+1];
-       annotate(x(cp.d),s.yL(Math.min(RATIO_MAX,cp.r)),"Not until "+d3.timeFormat("%b %Y")(cp.d)+" did deaths",["per 1,000 finally stay below","the Dec 2020 level"],-100,12);
+       annotate(x(cp.d),s.yL(Math.min(RATIO_MAX,cp.r)),"Not until "+d3.timeFormat("%b %Y")(cp.d)+" did deaths",["per 1,000 finally stay below","the Dec 2020 level"],84,-231);
      }
    }}
 ];
@@ -259,13 +259,13 @@ const scenes = [
 
 // per-region story box (swaps with the selected region)
 const STORIES = {
-  "World":         ["Reported deaths per 1,000 cases", ["declined from approximately 90","to 3.5; the majority of the","decline occurred before","widespread vaccination."]],
-  "Africa":        ["Vaccination coverage never", ["exceeded approximately 34%,","yet the deaths-per-1,000","ratio still declined."], "2020-04-01"],
-  "Asia":          ["The deaths-per-1,000 ratio", ["remained relatively stable as","vaccination rose from 5% to","58% and declined sharply only","after the arrival of Omicron."], "2021-03-01"],
-  "Europe":        ["Limited early testing inflates", ["the 2020 ratio. Even so, the","ratio fell substantially","before vaccination and declined","further with Omicron."], "2020-05-01"],
-  "North America": ["The deaths-per-1,000 ratio fell", ["from about 77 to 13 before","vaccination, rose to 21 at 60%","coverage, and declined only","with Omicron."]],
-  "Oceania":       ["Oceania met the virus at scale", ["only with milder Omicron, by","then about 60% vaccinated; its","deaths-per-1,000 ratio stayed","low throughout."]],
-  "South America": ["The deaths-per-1,000 ratio", ["declined early, then remained","elevated throughout the","vaccination rollout, falling","only with milder Omicron."]]
+  "World":         ["Reported deaths per 1,000 cases", ["declined from approximately 90","to 3.5; the majority of the","decline occurred before","widespread vaccination."], "2022-03-02"],
+  "Africa":        ["Vaccination coverage never", ["exceeded approximately 34%,","yet the deaths-per-1,000","ratio still declined."], "2020-02-26"],
+  "Asia":          ["The deaths-per-1,000 ratio", ["remained relatively stable as","vaccination rose from 5% to","58% and declined sharply only","after the arrival of Omicron."], "2020-06-17"],
+  "Europe":        ["Limited early testing inflates", ["the 2020 ratio. Even so, the","ratio fell substantially","before vaccination and declined","further with Omicron."], "2021-02-17"],
+  "North America": ["The deaths-per-1,000 ratio fell", ["from about 77 to 13 before","vaccination, rose to 21 at 60%","coverage, and declined only","with Omicron."], "2021-02-17"],
+  "Oceania":       ["Oceania met the virus at scale", ["only with milder Omicron, by","then about 60% vaccinated; its","deaths-per-1,000 ratio stayed","low throughout."], "2020-12-23"],
+  "South America": ["The deaths-per-1,000 ratio", ["declined early, then remained","elevated throughout the","vaccination rollout, falling","only with milder Omicron."], "2020-05-20"]
 };
 // ============ EXPLORE: decoupling for a chosen region (the full final-scene view) ============
 function drawDecoupling(){
